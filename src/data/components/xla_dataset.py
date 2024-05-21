@@ -44,7 +44,7 @@ class XLADataset(Dataset):
         self, 
         data_dir: str, 
         manifest: str,
-        task: str
+        task: str,
     ):
         super().__init__()
         self.data_dir = data_dir
@@ -53,17 +53,24 @@ class XLADataset(Dataset):
         self.task = task
         self.ranges = None
         self.id2sample = None
+        self.get_vocab()
+        
         self.samples = self.load_data(manifest)
         
-        if task == "val":
-            self.vocab = None
+    
+    def get_vocab(self):
+        with open(manifest, "r") as file:
+            samples = json.load(file)["train"]
+        
+        keys = list(samples.keys())
+        self.vocab = dict(zip(keys, range(len(keys))))
+
 
     def __len__(self) -> int:
         return len(self.samples)
     
     def __getitem__(self, index) -> tuple:
-        assert self.vocab is not None
-        assert index < len(self), "{1} is out of index of {2}".format(index, len(self))
+        
         filename, label = self.samples[index]
         # print("data: ", filename, label)
         # open & process image
@@ -80,8 +87,6 @@ class XLADataset(Dataset):
             self.id2sample = json.load(file)[self.task]
         
         keys = list(self.id2sample.keys())
-        # print("Keys range:", np.max(keys), np.min(keys))
-        self.vocab = dict(zip(keys, range(len(keys))))
         
         key_num = [len(self.id2sample[id]) for id in list(self.id2sample.keys())]
         ranges = np.cumsum(key_num).tolist() + [0]
@@ -91,7 +96,7 @@ class XLADataset(Dataset):
         print("total dataset: ", key_ranges[-2])
         # prepares token 
         sample2id = []
-
+        
         for key in keys: 
             filenames = self.id2sample[key]
             for fname in filenames:
@@ -115,7 +120,7 @@ class XLATransformedDataset(Dataset):
             dataset: XLADataset, 
             augmenter: Augmenter,
             transform: ImgAugTransform,
-            p = [0.6, 0.2, 0.2]
+            p = [0.6, 0.2, 0.2],
     ):
         assert augmenter is not None
         self.dataset = dataset
@@ -228,3 +233,6 @@ if __name__ == "__main__":
     sample = transformed_dataset[100]
     print(sample['filename'])
     print(sample['image'].shape)
+    labels = sample['label']
+    label2id = dataset.vocab
+    id2label =  

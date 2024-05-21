@@ -18,10 +18,11 @@ class Augmenter:
                 texture_path="", 
                 bg_checkpoint="", 
                 task="train",  
-                cnts_checkpoint=None):
+                choice=[1, 0, 0]):
         self.texture = None 
         self.bg_checkpoint = bg_checkpoint
         self.task = task
+        self.choice=choice
         # self.cnts_checkpoint = cnts_checkpoint + "{}.npz"
 
         # Since line pattern is gone, we gonna use this as alternative background
@@ -372,11 +373,10 @@ class Augmenter:
         return output
 
     def full_augment(self, 
-                    img, 
-                    choice=(0.6, 0.2, 0.2), 
+                    img,
                     fname=None, 
                     borderMode='native'):
-        pose = np.random.choice((1, 2, 3), p=choice)
+        pose = np.random.choice((1, 2, 3), p=self.choice)
         
         if pose == 1:
             return self.transform_img( img, 
