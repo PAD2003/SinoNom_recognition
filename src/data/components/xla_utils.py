@@ -93,7 +93,7 @@ class XLACollator(object):
             # print("Label:", label)
             labels.append(int(label))
 
-        print(labels)
+        # print(labels)
         rs = {
             'imgs': torch.stack(imgs, dim=0),
             'filenames': filenames,

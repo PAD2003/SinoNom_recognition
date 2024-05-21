@@ -7,6 +7,7 @@ from src.data.components.aug.augment_v2 import *
 from src.data.components.aug.base import thinning
 import os 
 import json
+import pickle
 
 random.seed(None)
 
@@ -64,11 +65,10 @@ class Augmenter:
             if '.' in part:
                 # print(pwd)
                 if os.path.exists(pwd):
-                    print(pwd, 'cached')
-                    with open(pwd, 'rb') as file:
-                        data = pickle.load(file)
+                    # print(pwd, 'cached')
+                    data = np.load(pwd, allow_pickle=True)
                 else: 
-                    print(pwd, 'saving')
+                    # print(pwd, 'saving')
                     thresh, bg_color, bg, freq = extract_background(image.copy())
                     np.savez(pwd, thresh=thresh, bg_color=bg_color, bg=bg, freq=freq)
             else:
@@ -140,7 +140,7 @@ class Augmenter:
         by = int(Augmenter.randomRange(by)) + int(max(1 - scale, 0) * img.shape[1] / 2)
         ex = int(Augmenter.randomRange(ex)) + int(max(1 - scale, 0) * img.shape[0] / 2)
         ey = int(Augmenter.randomRange(ey)) + int(max(1 - scale, 0) * img.shape[0] / 2)
-        print(fname)
+        # print(fname)
         # Load background details
         if fname is not None:
             # exclude file extension
@@ -429,7 +429,7 @@ if __name__ == "abc":
         for line in file:
             parts = line.strip().split()
             img = cv2.imread(img_dir + parts[0])
-            print(parts[0])
+            # print(parts[0])
             filename = parts[0].split(".")[0]
             output = augmenter.process(img, parts[1], 1, p=(0, 0, 1, 0), fname=filename, borderMode='native')
             for i in range(len(output)):
@@ -455,7 +455,7 @@ if __name__ =="__main__":
     img_label = "/work/hpc/firedogs/data_/train_gt.txt"
     parts = ["train_img_88652.png", "xeva"]
     img = cv2.imread(img_dir + parts[0])
-    print(parts[0])
+    # print(parts[0])
     filename = parts[0].split(".")[0]
     processed = augmenter.process(img, 
                                   parts[1], 

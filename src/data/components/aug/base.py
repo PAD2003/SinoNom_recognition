@@ -87,7 +87,8 @@ def sharpen(img):
   return sharpened
 
 def smooth(img, color_dis, scale=75):
-  blurred = cv2.bilateralFilter(img, 21, color_dis, int(scale))
+  # blurred = cv2.bilateralFilter(img, 21, color_dis, int(scale))
+  blurred = cv2.GaussianBlur(img, (3, 3), 0)
   sharpened = sharpen(blurred)
   return sharpened
 

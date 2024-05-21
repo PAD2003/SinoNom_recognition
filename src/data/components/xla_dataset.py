@@ -135,7 +135,7 @@ class XLATransformedDataset(Dataset):
         filename = sample['filename']
         image = sample['image']
         label = sample['label']
-        print("data: ", filename, label)
+        # print("data: ", filename, label)
         # first of all, transform the image before applying 
         image = self.augmenter.full_augment(image, 
                                             choice=self.p,

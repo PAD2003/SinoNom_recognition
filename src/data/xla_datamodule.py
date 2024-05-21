@@ -129,11 +129,11 @@ if __name__ == "__main__":
                                 base_augmenter=augmenter,
                                 color_augmenter=transform,
                                 image_shape = [64, 64],
-                                batch_size=64,
-                                num_workers= 4,
+                                batch_size=128,
+                                num_workers= 16,
                                 pin_memory=False,
-                                shuffle = False,
-                                upsampling = False)
+                                shuffle = True,
+                                upsampling = True)
     
     datamodule.setup()
     # datamodule.prepare_data()
@@ -149,4 +149,4 @@ if __name__ == "__main__":
     while m < 20000:
         m += 1
         sample = next(it)
-        print(sample['labels'])
+        print(m)
