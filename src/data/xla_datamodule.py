@@ -115,11 +115,11 @@ class XLADataModule(LightningDataModule):
         pass
 
 if __name__ == "__main__":
-    data_dir = "/data/hpc/potato/sinonom/data/wb_recognition_dataset/"
-    manifest = "/data/hpc/potato/sinonom/data/wb_recognition_dataset/manifest_split.json"
+    data_dir = "data/wb_recognition_dataset/"
+    manifest = "data/manifest_full.json"
     print(os.path.exists(manifest))
-    augmenter = Augmenter(  texture_path="/data/hpc/potato/sinonom/data/augment/background/base/", 
-                            bg_checkpoint="/data/hpc/potato/sinonom/data/augment/background/",
+    augmenter = Augmenter(  texture_path="data/augment/texture/", 
+                            bg_checkpoint="data/augment/background/",
                             task="train")
     
     transform = ImgAugTransform(0.3)
@@ -130,7 +130,7 @@ if __name__ == "__main__":
                                 color_augmenter=transform,
                                 image_shape = [64, 64],
                                 batch_size=64,
-                                num_workers= 0,
+                                num_workers= 4,
                                 pin_memory=False,
                                 shuffle = False,
                                 upsampling = False)
@@ -148,6 +148,5 @@ if __name__ == "__main__":
     m = 0
     while m < 20000:
         m += 1
-        
         sample = next(it)
         print(sample['labels'])
