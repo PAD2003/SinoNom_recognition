@@ -17,12 +17,10 @@ class Augmenter:
     def __init__(self, 
                 texture_path="", 
                 bg_checkpoint="", 
-                task="train",  
-                choice=[1, 0, 0]):
+                task="train"):
         self.texture = None 
         self.bg_checkpoint = bg_checkpoint
         self.task = task
-        self.choice=choice
         # self.cnts_checkpoint = cnts_checkpoint + "{}.npz"
 
         # Since line pattern is gone, we gonna use this as alternative background
@@ -195,6 +193,7 @@ class Augmenter:
         # if alpha_mask is not None:
         #     alpha_mask = np.ones(img.shape[:2])
         # Fill background
+        
         if alpha_mask is not None:
             # print("Apply native")
             alpha_mask = alpha_mask[max(0,y-by):min(y+h+ey, transformed.shape[0]),
@@ -284,6 +283,7 @@ class Augmenter:
             cv2.imwrite(os.path.join(debug, "cropped_mask_{}.jpg").format(fname), log_c_mask)
             cv2.imwrite(os.path.join(debug, "background_alpha_{}.jpg").format(fname), background * (1 - alpha_mask))
             cv2.imwrite(os.path.join(debug, "content_alpha_{}.jpg").format(fname), cropped * alpha_mask)
+
         return output.astype(np.uint8), cropped_mask, transform_matrix 
             
         
@@ -374,9 +374,10 @@ class Augmenter:
 
     def full_augment(self, 
                     img,
+                    choice,
                     fname=None, 
                     borderMode='native'):
-        pose = np.random.choice((1, 2, 3), p=self.choice)
+        pose = np.random.choice((1, 2, 3), p=choice)
         
         if pose == 1:
             return self.transform_img( img, 

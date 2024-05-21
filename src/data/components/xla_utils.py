@@ -97,8 +97,10 @@ class XLACollator(object):
         rs = {
             'imgs': torch.stack(imgs, dim=0),
             'filenames': filenames,
-            'labels': torch.nn.functional.one_hot(  torch.Tensor(labels).to(torch.int64), 
-                                                    num_classes=self.num_class)
+            'labels': torch.nn.functional.one_hot(
+                torch.Tensor(labels).to(torch.int64), 
+                num_classes=self.num_class
+            ).to(torch.float)
         }   
         
         return rs
