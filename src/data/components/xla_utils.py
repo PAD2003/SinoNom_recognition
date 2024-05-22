@@ -101,6 +101,8 @@ class XLACollator(object):
                 torch.Tensor(labels).to(torch.int64), 
                 num_classes=self.num_class
             ).to(torch.float)
-        }   
+        }
+        print(imgs.shape)
+        print(labels.shape)
         
         return rs

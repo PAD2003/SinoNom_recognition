@@ -45,8 +45,6 @@ class XLADataset(Dataset):
         
         keys = list(samples.keys())
         self.vocab = dict(zip(keys, range(len(keys))))
-        print(f"Length of vocab: {len(self.vocab)}")
-        print(self.vocab)
 
     def __len__(self) -> int:
         return len(self.samples)
