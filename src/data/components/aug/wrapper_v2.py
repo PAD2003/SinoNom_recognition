@@ -10,19 +10,22 @@ import json
 import pickle
 
 random.seed(None)
+import time
 
-MORPH_WINDOW_CROSS = [cv2.getStructuringElement(cv2.MORPH_CROSS, (i * 2 + 1, i * 2 + 1)) for i in range(6)]
-MORPH_WINDOW_ELLIPSE = [cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (i * 2 + 1, i * 2 + 1)) for i in range(6)]
+MORPH_WINDOW_CROSS = [cv2.getStructuringElement(cv2.MORPH_CROSS, (i * 2 + 1, i * 2 + 1)) for i in range(1, 6)]
+MORPH_WINDOW_ELLIPSE = [cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (i * 2 + 1, i * 2 + 1)) for i in range(1, 6)]
 class Augmenter:
     def __init__(self, 
                 texture_path="", 
                 bg_checkpoint="", 
+                mask_checkpoint="",
                 task="train"):
         self.texture = None 
         self.bg_checkpoint = bg_checkpoint
+        self.mask_checkpoint = mask_checkpoint
         self.task = task
         # self.cnts_checkpoint = cnts_checkpoint + "{}.npz"
-
+        self.prepare()
         # Since line pattern is gone, we gonna use this as alternative background
         self.load_texture(texture_path)
         
@@ -39,6 +42,26 @@ class Augmenter:
         # self.cnts_checkpoint = cnts_checkpoint + "{}.npz"
         # self.bg_checkpoint = bg_checkpoint + "{}.npz"
     
+
+    def prepare(self):
+        try:
+            if not os.path.exists(self.mask_checkpoint):
+                os.mkdir(self.mask_checkpoint)
+
+            if not os.path.exists(self.bg_checkpoint):
+                os.mkdir(self.bg_checkpoint)
+
+
+            if not os.path.exists(os.path.join(self.mask_checkpoint, self.task)):
+                os.mkdir(os.path.join(self.mask_checkpoint, self.task))
+
+            if not os.path.exists(os.path.join(self.bg_checkpoint, self.task)):
+                os.mkdir(os.path.join(self.bg_checkpoint, self.task))
+        except: 
+            print("Error Loading")
+            return 
+            
+
     def load_texture(self, path):
         if os.path.isdir(path):
             self.texture = []
@@ -51,7 +74,47 @@ class Augmenter:
         else:
             self.texture = cv2.imread(path)
 
-    def bake_bg(self, image, path=None):
+    def bake_mask(self, image, path=None):
+        data = None
+        pwd = os.path.join(self.mask_checkpoint, self.task)
+        # Check background folder availability
+        # print(os.path.exists(pwd))
+        create = False
+        parts = path.split("/")
+        # Sequentially reaching the file
+        for part in parts:
+            pwd = os.path.join(pwd, part)
+            if '.' in part:
+                # print(pwd)
+                if os.path.exists(pwd):
+                    # print(pwd, 'cached')
+                    mask_img = cv2.imread(pwd) // 250
+                    return mask_img[:, :, :2]
+                else: 
+                    mask = sharp_mask(image, 0.8, 0.8, line_erode=False)
+                    word_skeleton = thinning(mask)
+                    filling = np.zeros_like(mask)
+                    mask_img = np.stack([mask, word_skeleton, filling], axis=2) 
+                    print("Creating mask ", pwd)
+                    cv2.imwrite(pwd, (mask_img * 255).astype(int).astype(np.uint8))
+                    return mask_img[:, :, :2]
+            else:
+                if not os.path.exists(pwd):
+                    os.mkdir(pwd)
+                    create = True
+
+        # extract data 
+        mask = sharp_mask(image, 0.8, 0.8, line_erode=False)
+        skeleton = thinning(mask)
+
+        return  np.stack([mask, skeleton], axis=2)
+
+    def bake_bg(self, image, path=None): 
+
+        if not path: 
+            thresh, bg_color, bg, freq = extract_background(image.copy())
+            return {"thresh": thresh, "bg_color": bg_color, "bg": bg, "freq": freq}
+
         data = None
         pwd = os.path.join(self.bg_checkpoint, self.task)
         # Check background folder availability
@@ -66,10 +129,12 @@ class Augmenter:
                 if os.path.exists(pwd):
                     # print(pwd, 'cached')
                     data = np.load(pwd, allow_pickle=True)
+                    return data
                 else: 
                     # print(pwd, 'saving')
                     thresh, bg_color, bg, freq = extract_background(image.copy())
                     np.savez(pwd, thresh=thresh, bg_color=bg_color, bg=bg, freq=freq)
+                    return {"thresh": thresh, "bg_color": bg_color, "bg": bg, "freq": freq}
             else:
                 if not os.path.exists(pwd):
                     os.mkdir(pwd)
@@ -77,10 +142,11 @@ class Augmenter:
         
         # data = np.load(self.bg_checkpoint.format(path))
         # extract data 
+        print("Miss some cases ?")
         thresh, bg_color, bg, freq = extract_background(image.copy())
         
         return {"thresh": thresh, "bg_color": bg_color, "bg": bg, "freq": freq} if data is None else data 
-
+    
     # use for sequential data only...
     @staticmethod
     def translate(label):
@@ -113,10 +179,10 @@ class Augmenter:
                             shear_y=(-0.1, 0.1), 
                             opacity=(0.6, 1),
                             scale=(0.5, 1.2),
-                            bx=(2, 3),
-                            by=(0, 6),
-                            ex=(0, 5),
-                            ey=(0, 5),
+                            bx=(0, 3),
+                            by=(0, 3),
+                            ex=(0, 3),
+                            ey=(0, 3),
                             logger=None,
                             debug= None,
                             keep_mask=False,
@@ -124,13 +190,16 @@ class Augmenter:
                             fname=None,
                             borderMode='constant',
                             morph_size=(-2, 2.5),
-                            morph=False):
+                            morph=False,
+                            inv=(0., 1.)):
         
         # Arguments configuration
         rotate = int(Augmenter.randomRange(rotate))
         shear_x = Augmenter.randomRange(shear_x)
         shear_y = Augmenter.randomRange(shear_y)
-        alpha = borderMode != 'constant' 
+        alpha = borderMode != 'constant'
+
+        inv = np.random.choice([True, False], p=inv) 
         # print(alpha)
 
         scale = Augmenter.randomRange(scale)
@@ -144,22 +213,22 @@ class Augmenter:
         if fname is not None:
             # exclude file extension
             
-            fname = fname.split(".")[0] + ".npz"
+            fname = fname.split(".")[0]
             # read data
-            data = self.bake_bg(img, path=fname)
+            data = self.bake_bg(img, path=fname + ".npz")
             thresh = data['thresh']
             bg_color = data['bg_color'].tolist()
             bg = data['bg']
             freq = data['freq']
             bg_color.append(0)  
+            mask = self.bake_mask(img, path=fname + ".png")
         else:
-            data = self.bake_bg(img, path=fname)
+            data = self.bake_bg(img, path=None)
+            mask = self.bake_mask(img, path=None)
 
         # Mask extraction
         if mask is None:
-            mask = sharp_mask(img, 0.95, 0.95)
-        else:
-            mask = mask
+            mask = self.bake_mask(img, path=None)
 
         # Configure background
         if borderMode == 'replicate':
@@ -181,18 +250,13 @@ class Augmenter:
                                                                                     alpha=alpha)
         
         # Crop content and padding
-        points = np.array(np.where(transformed_mask > 0)).T
+        points = np.array(np.where(transformed_mask[:, :, 0] > 0)).T
         y, x, h, w = cv2.boundingRect(points)
         cropped = transformed[max(0,y-by):min(y+h+ey, transformed.shape[0]),max(0,x-bx):min(x+w+ex,transformed.shape[1])]
         cropped_mask = transformed_mask[max(0,y-by):min(y+h+ey, transformed.shape[0]),max(0,x-bx):min(x+w+ex,transformed.shape[1])]
-        
-        # print("Bounding rect: x {0}-{1}, y {2}-{3}".format(max(0, x-bx), x + w + ex, max(0, y - ey), y + h + ey))
-        # print("Original img shape:{}".format(transformed.shape))
-        # print("Cropped img shape:{}".format(cropped.shape))
-        # print(alpha_mask.shape)
-        # if alpha_mask is not None:
-        #     alpha_mask = np.ones(img.shape[:2])
-        # Fill background
+        # Mask now has 2 channels
+        skeleton = cropped_mask[:, :, 1].copy()
+        cropped_mask = cropped_mask[:, :, 0]
         
         if alpha_mask is not None:
             # print("Apply native")
@@ -203,13 +267,11 @@ class Augmenter:
                 # print(morph_size)
                 if morph_size > 0: 
                     # print(morph_size)
-                    cropped_mask = thinning(cropped_mask)
-                    cropped_mask = cv2.dilate(cropped_mask, MORPH_WINDOW_CROSS[morph_size])
-                    alpha_mask[cropped_mask == 0] = 0
+                    word_mask = cv2.dilate(skeleton, MORPH_WINDOW_CROSS[5 - morph_size])
+                    alpha_mask[word_mask == 0] = 0
                 elif morph_size < 0:
-                    cropped_mask = thinning(cropped_mask)
-                    cropped_mask = cv2.dilate(cropped_mask, MORPH_WINDOW_ELLIPSE[int(- morph_size * 1.5)])
-                    thicken_mask = np.stack([cropped_mask] * 3, axis = 2).astype(float)
+                    word_mask = cv2.dilate(skeleton, MORPH_WINDOW_ELLIPSE[int(- morph_size) ])
+                    thicken_mask = np.stack([word_mask] * 3, axis = 2).astype(float)
                     thicken_mask = cv2.GaussianBlur(thicken_mask, (3, 3), 0)
             # print(alpha_mask.shape, cropped.shape)
             
@@ -256,12 +318,18 @@ class Augmenter:
             output = background * (1 - alpha_mask) + cropped * alpha_mask
             
             if morph is True and morph_size < 0:
-                output *= 1 - thicken_mask * 0.8
+                if inv is True: 
+                    print("Inverse")
+                    output[thicken_mask > 0] = 255 -  output[thicken_mask > 0]
+                else: 
+                    output *= 1 - thicken_mask * 0.8
             output = np.clip(output, 0, 255)
             output = output.astype(int).astype(np.uint8)
         else:
             output = cropped
         
+        del background, alpha_mask, randomnizer, skeleton, points
+
         if isinstance(debug, str):
             fname = fname.split("/")[-1].split(".")[0]
             # print("Logging output for debugging")
@@ -286,125 +354,57 @@ class Augmenter:
 
         return output.astype(np.uint8), cropped_mask, transform_matrix 
             
-        
-        # return augment_img(img, rotate=rotate,
-        #                         shear_x=shear_x,
-        #                         shear_y=shear_y,
-        #                         logger=logger,
-        #                         debug=debug,
-        #                         keep_mask=keep_mask,
-        #                         export=export)
-    
-
-    @staticmethod
-    def add_noise(img,  label,
-                        mask=None,
-                        transform=None,
-                        bg_color=1,
-                        line_width=(2, 5),
-                        spacing=(1, 6),
-                        y_noise=(0, 5),
-                        skew_noise=(0, 0.1),
-                        intent=(0.8, 0.1),
-                        align=(-1.2, 0.7),
-                        ignore_skew=(0.8, 0.2),
-                        noise_level=(0, 0.1),
-                        axis = (0.2, 0.8),
-                        dark = (0.8, 1.2),
-                        fname=None,
-                        num_line=(1, 2),
-                        distort_level=(0, 5),
-                        distort_degree=(0.5, 0.5)):
-        """ Adding noise and patterns into image, ignore if text doesn't follow Latin style.
-        """
-        line_width = int(Augmenter.randomRange(line_width))
-        num_line = int(Augmenter.randomRange(num_line))
-        dark = Augmenter.randomRange(dark)
-
-        if fname is None:
-            print("File not found" + self.cnts_checkpoint.format(fname))
-            cnts, boxes, is_char, centroid = find_text_and_punc(img, mask, label)
-            transform = None
-        else:
-            # print("Load parameter")
-            param = np.load(self.cnts_checkpoint.format(fname), allow_pickle=True)
-            boxes = param['boxes']
-            is_char = param['is_char']
-            centroid = param['centroid']
-            # print(is_char)
-        
-        # print(line_width)
-        pattern = cv2.resize(Augmenter.texture, (line_width, line_width), interpolation=cv2.INTER_LINEAR)
-        padding = (np.array(pattern.shape, dtype=int) / 3).astype(int)
-        pattern = cv2.copyMakeBorder(pattern, padding[0], padding[0], padding[1], padding[1], borderType=cv2.BORDER_CONSTANT, value=(1, 1, 1))
-        pattern = cv2.blur(pattern, (2, 2))
-        pattern[ pattern < 1] /= dark
-        
-        output = img.copy()
-        for i in range(num_line):
-            i_y_noise = Augmenter.randomRange(y_noise)
-            i_skew_noise = Augmenter.randomRange(skew_noise)
-            i_intent = np.random.choice([False, True], p=intent)
-            i_align = Augmenter.randomRange(align)
-            i_ignore_skew = np.random.choice([False, True], p=ignore_skew)
-            i_noise_level = Augmenter.randomRange(noise_level)
-            i_axis = np.random.choice([0, 1], p=axis)
-            i_spacing = max(Augmenter.randomRange(spacing), - line_width + 1)
-            a, b = line_vector(boxes, 
-                            is_char, 
-                            centroid, 
-                            img.shape, 
-                            transform=transform,
-                            y_noise=i_y_noise, 
-                            skew_noise=i_skew_noise, 
-                            intent=i_intent, 
-                            align=i_align, 
-                            ignore_skew=i_ignore_skew, 
-                            axis=i_axis)
-            
-            output = draw_line(output, pattern, i_spacing, a, b, axis=i_axis, noise_level=noise_level)
-        
-                
-        output = elasticdeform.deform_random_grid(output, 
-                                                  sigma=Augmenter.randomRange(distort_level), 
-                                                  points=np.random.choice([3, 4], p=distort_degree), 
-                                                  axis=(0, 1), 
-                                                  mode='nearest')
-        return output
-
     def full_augment(self, 
                     img,
                     choice,
                     fname=None, 
                     borderMode='native'):
-        pose = np.random.choice((1, 2, 3), p=choice)
+        pose = np.random.choice((1, 2, 3, 4), p=choice)
         
         if pose == 1:
-            return self.transform_img( img, 
-                                            fname=fname, 
-                                            scale=(1., ),
-                                            rotate=(0, ), 
-                                            shear_x=(0, ), 
-                                            shear_y=(0, ), 
-                                            opacity=(1, ),
-                                            borderMode=borderMode)[0]
+            return  self.transform_img( img, 
+                                        fname=fname, 
+                                        scale=(1., ),
+                                        rotate=(0, ), 
+                                        shear_x=(0, ), 
+                                        shear_y=(0, ), 
+                                        opacity=(1, ),
+                                        bx=(1, ),
+                                        by=(1, ),
+                                        ex=(1, ),
+                                        ey=(1, ),
+                                        borderMode=borderMode)[0]
         elif pose == 2:
-            return self.transform_img( img, 
-                                            fname=fname,
-                                            scale=(1., ),  
-                                            rotate=(0, ), 
-                                            shear_x=(0, ), 
-                                            shear_y=(0, ), 
-                                            morph_size=(-3, 3.5),
-                                            morph=True,
-                                            borderMode=borderMode)[0]
+            return  self.transform_img( img, 
+                                        fname=fname,
+                                        scale=(1., ),  
+                                        rotate=(0, ), 
+                                        shear_x=(0, ), 
+                                        shear_y=(0, ), 
+                                        morph_size=(-3, 3.5),
+                                        morph=True,
+                                        borderMode=borderMode)[0]
         elif pose == 3:
-            return self.transform_img( img, 
-                                            fname=fname,
-                                            morph_size=(-3, 3.5),
-                                            morph=True,
-                                            borderMode=borderMode)[0]
-
+            return  self.transform_img( img, 
+                                        fname=fname,
+                                        morph_size=(-3, 3.5),
+                                        morph=True,
+                                        borderMode=borderMode)[0]
+        else: 
+            return  self.transform_img( img, 
+                                        fname=fname,
+                                        morph_size=(-3, 3.5),
+                                        morph=True,
+                                        borderMode=borderMode,
+                                        inv=(0.2, 0.8))[0]
+    
+    def threaded_augment(self, 
+                            img, 
+                            choice, 
+                            fname=None, 
+                            borderMode='native'):
+        pass
+    
     @staticmethod
     def process(img, 
                 label, 
@@ -437,42 +437,67 @@ if __name__ == "abc":
                 cv2.imwrite("/work/hpc/firedogs/potato/output/augmented_{}_{}".format(i, parts[0]), output[i])
 
 if __name__ =="__main__":
-    augmenter = Augmenter(  texture_path="/work/hpc/potato/SinoNom/data/augment/texture/", 
-                            bg_checkpoint="/work/hpc/potato/SinoNom/data/augment/background/",
+    def delete_contents_of_folder(folder_path):
+        try:
+            for filename in os.listdir(folder_path):
+                file_path = os.path.join(folder_path, filename)
+                if os.path.isfile(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            print(f"Deleted all contents of the folder: {folder_path}")
+        except Exception as e:
+            print(f"Error deleting contents of the folder: {folder_path}")
+
+    augmenter = Augmenter(  texture_path="/work/hpc/potato/SinoNom_recognition/data/augment/texture/", 
+                            bg_checkpoint="/work/hpc/potato/SinoNom_recognition/data/augment/background/",
+                            mask_checkpoint="/work/hpc/potato/SinoNom_recognition/data/augment/mask/",
                             task="train")
-    img_dir = "/work/hpc/potato/SinoNom/data/wb_recognition_dataset/train/"
-    # /data/hpc/potato/sinonom/data/wb_recognition_dataset/train/1/nlvnpf-0137-01-022_crop_23.jpg
-    filename = "0/12_0.png"
+    img_dir = "./data/wb_recognition_dataset/train/"
+    # data/wb_recognition_dataset/train/1/nlvnpf-0137-01-022_crop_23.jpg
+    filename = "0/6_0.png"
     label, fname = filename.split("/")
     img = cv2.imread(img_dir + filename)
     label = int(label)
-    transformed, _, _ = augmenter.transform_img(img, 
-                                                fname=filename,
-                                                debug="/data/hpc/potato/sinonom/data/debug", 
-                                                borderMode='native',
-                                                scale=(0.6, ),
-                                                morph_size=(-3.,),
-                                                morph=True)
-    img_label = "/work/hpc/firedogs/data_/train_gt.txt"
-    parts = ["train_img_88652.png", "xeva"]
-    img = cv2.imread(img_dir + parts[0])
+    delete_contents_of_folder("/data/hpc/potato/sinonom/data/debug")
+    # transformed, _, _ = augmenter.transform_img(img, 
+    #                                             fname=filename,
+    #                                             debug="/data/hpc/potato/sinonom/data/debug", 
+    #                                             borderMode='native',
+    #                                             scale=(0.7, ),
+    #                                             morph_size=(4.,), 
+    #                                             morph=True,
+    #                                             inv=(1., 0.))
+    # img_label = "/work/hpc/firedogs/data_/train_gt.txt"
+    # parts = ["train_img_88652.png", "xeva"]
+    # img = cv2.imread(img_dir + parts[0])
     # print(parts[0])
-    filename = parts[0].split(".")[0]
-    processed = augmenter.process(img, 
-                                  parts[1], 
-                                  1, 
-                                  p=(0, 1, 0, 0), 
-                                  fname=filename,
-                                  borderMode='replicate')[0]
+    # filename = parts[0].split(".")[0]
+    # processed = augmenter.process(img, 
+    #                               parts[1], 
+    #                               1, 
+    #                               p=(0, 1, 0, 0), 
+    #                               fname=filename,
+    #                               borderMode='replicate')[0]
     # print(processed.shape, processed.dtype)
-    cv2.imwrite("/data/hpc/potato/sinonom/data/debug/{}.jpg".format(fname.split(".")[0]), transformed)
-    with open("./data/wb_recognition_dataset/manifest_split.json", "r") as file: 
+    # cv2.imwrite("/data/hpc/potato/sinonom/data/debug/{}.jpg".format(fname.split(".")[0]), transformed)
+    # import time 
+    i = 0
+    current = time.time()
+    start = current
+    with open("./data/manifest_full.json", "r") as file: 
         dataset = json.load(file)['train']
     for key in dataset.keys(): 
         samples = dataset[key]
-        for sample in samples:
+        for sample in dataset[key]:
             img = cv2.imread(img_dir + sample)
             # print(sample)
-            augmenter.bake_bg(img, path=sample)
-
+            i += 1
+            fname = sample.split(".")[0]
+            current = time.time()
+            # augmenter.bake_bg(img, path=fname + ".npz")
+            # augmenter.bake_mask(img, path=fname + ".png")
+            transformed = augmenter.full_augment(img, [0, 0, 0, 1], fname=sample, borderMode='native')
+            print(i, "-th image shape:", time.time() - current)
+    print("Done all in", time.time() - start)
         

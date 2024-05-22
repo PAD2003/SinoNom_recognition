@@ -7,7 +7,7 @@ rootutils.setup_root(search_from=__file__, indicator="setup.py", pythonpath=True
 from lightning import LightningDataModule
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
 from torchvision.transforms import transforms
-from src.data.components.vietocr_aug import ImgAugTransform
+from src.data.components.aug.vietocr_aug import ImgAugTransform
 # from src.data.components.ocr_vocab import Vocab
 from src.data.components.aug.wrapper_v2 import Augmenter
 from src.data.components.xla_dataset import XLADataset, XLATransformedDataset
@@ -76,18 +76,18 @@ class XLADataModule(LightningDataModule):
         # if isinstance(self.train_dataloader, DataLoader):
         #     return self.train_dataloader
         
-        # train_sampler = XLARandomSampler( data_source=self.data_train.dataset.ranges,
-        #                                    max_size=len(self.data_train),
-        #                                    shuffle=self.hparams.shuffle,
-        #                                    balance=self.hparams.upsampling)
+        train_sampler = XLARandomSampler( data_source=self.data_train.dataset.ranges,
+                                           max_size=len(self.data_train),
+                                           shuffle=self.hparams.shuffle,
+                                           balance=self.hparams.upsampling)
 
         collator = XLACollator( num_class=self.data_train.num_classes(),
                                 image_shape=self.hparams.image_shape)
 
         self.train_loader =  DataLoader(self.data_train,
                             batch_size = self.hparams.batch_size,
-                            shuffle=self.hparams.shuffle,
-                            # sampler=train_sampler,
+                            # shuffle=self.hparams.shuffle,
+                            sampler=train_sampler,
                             num_workers=self.hparams.num_workers,
                             collate_fn=collator,
                             pin_memory= self.hparams.pin_memory
@@ -126,6 +126,7 @@ class XLADataModule(LightningDataModule):
 import hydra
 from omegaconf import DictConfig
 import rootutils
+import time
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 @hydra.main(version_base="1.3", config_path="../../configs", config_name="train.yaml")
 def main(cfg: DictConfig):
@@ -134,17 +135,28 @@ def main(cfg: DictConfig):
     dm.prepare_data()
     dm.setup()
     
+    loader = dm.train_dataloader()
+
     # test dataloader
     print(f"Length of train dataloader: {len(dm.train_dataloader())}")
     print(f"Length of val dataloader: {len(dm.val_dataloader())}")
     print(f"Length of test dataloader: {len(dm.test_dataloader())}\n")
     
     # test batch
-    batch = next(iter(dm.train_dataloader()))
+    
+    batch = next(iter(loader))
     print(f"Type of one batch: {type(batch)}")
     print(f"Length of one batch (batch size): {len(batch)}")
     print(f"Test sample: {len(batch['filenames'])}")
+    
+    i = 1
+    current_time = time.time()
+    while i < 1000:
+        batch = next(iter(loader))
         
+        print("Batch {0} cost {1} seconds".format(i, time.time() - current_time))
+        current_time = time.time()
+        i += 1
 
 if __name__ == "__main__":
     main()
