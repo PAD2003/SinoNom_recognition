@@ -6,9 +6,10 @@ import numpy as np
 import math
 import shutil
 import json
+import time
 
 from src.data.components.aug.wrapper_v2 import Augmenter
-from src.data.components.vietocr_aug import ImgAugTransform
+from src.data.components.aug.vietocr_aug import ImgAugTransform
 
 def delete_contents_of_folder(folder_path):
     try:
@@ -70,8 +71,8 @@ class XLADataset(Dataset):
         keys = list(self.id2sample.keys())
         
         key_num = [len(self.id2sample[id]) for id in list(self.id2sample.keys())]
-        ranges = np.cumsum(key_num).tolist() + [0]
-        key_ranges = [[ranges[i-1], ranges[i]] for i in range(0, len(ranges) - 1)]
+        ranges = [0] + np.cumsum(key_num).tolist()
+        key_ranges = [[ranges[i-1], ranges[i]] for i in range(1, len(ranges))]
         # get id distribution of space for upsampling 
         self.ranges = dict(zip(keys, key_ranges))
 
@@ -121,17 +122,17 @@ class XLATransformedDataset(Dataset):
         filename = sample['filename']
         image = sample['image']
         label = sample['label']
-        # print("data: ", filename, label)
+        
         # first of all, transform the image before applying
         if self.p != [0.0, 0.0, 0.0]:
             image = self.augmenter.full_augment(image, 
                                                 choice=self.p,
                                                 fname=filename,
                                                 borderMode='native')
-            
+    
         if isinstance(self.transform, ImgAugTransform):
             image = self.transform(image)
-        
+
         return {'filename': filename, 'image': image, 'label': label}
 
     def num_classes(self):

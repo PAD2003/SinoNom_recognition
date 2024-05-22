@@ -6,10 +6,11 @@ base_augmenter:
   _target_: src.data.components.aug.wrapper_v2.Augmenter
   texture_path: ${paths.data_dir}augment/texture/
   bg_checkpoint: ${paths.data_dir}augment/background/
+  mask_checkpoint: ${paths.data_dir}augment/mask/
   task: train
 
 color_augmenter:
-  _target_: src.data.components.vietocr_aug.ImgAugTransform
+  _target_: src.data.components.aug.vietocr_aug.ImgAugTransform
   p: 0.3
 
 image_shape: [64, 64]
@@ -18,5 +19,5 @@ num_workers: 0
 pin_memory: False 
 shuffle: True
 upsampling: True
-train_p: [0.0, 0.0, 0.0]
+train_p: [0.6, 0.15, 0.15, 0.1]
 val_p: [0.0, 0.0, 0.0]
