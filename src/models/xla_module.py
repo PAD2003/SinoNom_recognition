@@ -19,7 +19,7 @@ class XLALitModule(LightningModule):
 
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
-        self.save_hyperparameters(logger=False, ignore=['net'])
+        self.save_hyperparameters(logger=False) #, ignore=['net'])
 
         self.net = net
 
@@ -56,11 +56,9 @@ class XLALitModule(LightningModule):
         labels = batch['labels']
         
         logits = self.forward(imgs)
-        print(logits.shape, labels.shape)
         loss = self.criterion(logits, labels)
         preds = torch.argmax(logits, dim=1)
         labels = torch.argmax(labels, dim=1)
-        print(preds.shape, labels.shape)
         return loss, preds, labels
 
     def training_step(

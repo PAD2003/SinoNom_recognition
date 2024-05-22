@@ -7,7 +7,7 @@ rootutils.setup_root(search_from=__file__, indicator="setup.py", pythonpath=True
 from lightning import LightningDataModule
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
 from torchvision.transforms import transforms
-from src.data.components.vietocr_aug import ImgAugTransform
+from src.data.components.aug.vietocr_aug import ImgAugTransform
 # from src.data.components.ocr_vocab import Vocab
 from src.data.components.aug.wrapper_v2 import Augmenter
 from src.data.components.xla_dataset import XLADataset, XLATransformedDataset
@@ -36,14 +36,9 @@ class XLADataModule(LightningDataModule):
 
         self.data_train: Optional[Dataset] = None
         self.data_val: Optional[Dataset] = None
-        # self.data_test: Optional[Dataset] = None
-
-        # self.batch_size_per_device = batch_size
         
         self.train_loader: Optional[DataLoader] = None
         self.val_loader: Optional[DataLoader] = None
-
-        # self.val_loader: Optional[DataLoader] = None
     
     def prepare_data(self) -> None:
         pass 
@@ -97,7 +92,6 @@ class XLADataModule(LightningDataModule):
                             collate_fn=collator,
                             pin_memory= self.hparams.pin_memory
                             )
-        # print(self.train_dataloader)
         
         return self.train_loader
     
@@ -128,47 +122,11 @@ class XLADataModule(LightningDataModule):
     def teardown(self, stage: Optional[str] = None) -> None:
         pass
 
-# if __name__ == "__main__":
-#     data_dir = "data/wb_recognition_dataset/"
-#     manifest = "data/manifest_full.json"
-#     print(os.path.exists(manifest))
-#     augmenter = Augmenter(  texture_path="data/augment/texture/", 
-#                             bg_checkpoint="data/augment/background/",
-#                             task="train")
-    
-#     transform = ImgAugTransform(0.3)
-
-#     datamodule = XLADataModule(data_dir,
-#                                 manifest,
-#                                 base_augmenter=augmenter,
-#                                 color_augmenter=transform,
-#                                 image_shape = [64, 64],
-#                                 batch_size=128,
-#                                 num_workers= 16,
-#                                 pin_memory=False,
-#                                 shuffle = True,
-#                                 upsampling = True)
-    
-#     datamodule.setup()
-#     # datamodule.prepare_data()
-#     # print(type(datamodule))
-#     # print(datamodule)
-#     loader = datamodule.train_dataloader()
-#     # dataset = datamodule.data_val
-#     # sample = dataset[0]
-#     # ranges = dataset.dataset.ranges 
-#     # print(ranges)
-#     it = iter(loader)
-#     m = 0
-#     while m < 20000:
-#         m += 1
-#         sample = next(it)
-#         print(m)
-
 ############################################################### TEST ###############################################################
 import hydra
 from omegaconf import DictConfig
 import rootutils
+import time
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 @hydra.main(version_base="1.3", config_path="../../configs", config_name="train.yaml")
 def main(cfg: DictConfig):
@@ -177,17 +135,28 @@ def main(cfg: DictConfig):
     dm.prepare_data()
     dm.setup()
     
+    loader = dm.train_dataloader()
+
     # test dataloader
     print(f"Length of train dataloader: {len(dm.train_dataloader())}")
     print(f"Length of val dataloader: {len(dm.val_dataloader())}")
     print(f"Length of test dataloader: {len(dm.test_dataloader())}\n")
     
     # test batch
-    batch = next(iter(dm.train_dataloader()))
+    
+    batch = next(iter(loader))
     print(f"Type of one batch: {type(batch)}")
     print(f"Length of one batch (batch size): {len(batch)}")
     print(f"Test sample: {len(batch['filenames'])}")
+    
+    i = 1
+    current_time = time.time()
+    while i < 1000:
+        batch = next(iter(loader))
         
+        print("Batch {0} cost {1} seconds".format(i, time.time() - current_time))
+        current_time = time.time()
+        i += 1
 
 if __name__ == "__main__":
     main()

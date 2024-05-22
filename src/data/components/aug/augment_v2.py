@@ -63,7 +63,7 @@ def rotate_img(img, angle, mask, bg_color):
                           dsize=(int(w1), int(h1)),
                           borderMode=cv2.BORDER_CONSTANT,
                           borderValue=bg_color)
-  return warped[:, :, :img.shape[2]], warped[:, :, -1]
+  return warped[:, :, :img.shape[2]], warped[:, :, image.shape[2]:]
 
 def point_transform(points, M, homogeneous=False, transpose=False):  
   if homogeneous is False: 
@@ -125,23 +125,33 @@ def warp_transform(img,
   transform_matrix[:, 2] += [translate_y, translate_x, 0]
   w_new, h_new= (np.max(transformed_corner, axis=0) - np.min(transformed_corner, axis=0)).astype(int) + [translate_y + pad_y + 1, translate_x + pad_x + 1]
   
-  masked_img = np.concatenate([img, mask[:, :, None].astype(np.uint8)], axis=2)
+  if len(mask.shape) == 2:
+    masked_img = np.concatenate([img, mask[:, :, None].astype(np.uint8)], axis=2)
+  else: 
+    masked_img = np.concatenate([img, mask.astype(np.uint8)], axis=2)
   masked_img = cv2.resize(masked_img, (0, 0),fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
-
+  # print(bg_color)
   if border_replicate is False:
-    transformed = cv2.warpPerspective(masked_img, 
+    transformed_img = cv2.warpPerspective(masked_img[:, :, :3], 
                                       transform_matrix, 
                                       dsize=(w_new, h_new), 
                                       borderMode=cv2.BORDER_CONSTANT,
-                                      borderValue=bg_color, 
+                                      borderValue=bg_color[:3], 
                                       flags=cv2.INTER_LINEAR)
+    
+    transformed_mask = cv2.warpPerspective(masked_img[:, :, 3:], 
+                                          transform_matrix, 
+                                          dsize=(w_new, h_new), 
+                                          borderMode=cv2.BORDER_CONSTANT,
+                                          borderValue=(0, ), 
+                                          flags=cv2.INTER_LINEAR)                                                     
   else:
     transformed_img = cv2.warpPerspective(masked_img[:, :, :3], 
                                           transform_matrix, 
                                           dsize=(w_new, h_new), 
                                           borderMode=cv2.BORDER_REPLICATE,
                                           flags=cv2.INTER_LINEAR)
-    transformed_mask = cv2.warpPerspective(masked_img[:, :, 3], 
+    transformed_mask = cv2.warpPerspective(masked_img[:, :, 3:], 
                                           transform_matrix, 
                                           dsize=(w_new, h_new), 
                                           borderMode=cv2.BORDER_CONSTANT,
@@ -159,13 +169,16 @@ def warp_transform(img,
   else:
     alpha_mask = None
   
-  return transformed[:, :, :img.shape[2]], transformed[:, :, img.shape[2]], transform_matrix, alpha_mask
+  return transformed_img, transformed_mask , transform_matrix, alpha_mask
   
   
 def shear_img(img, mask, shear_x, shear_y, bg_color):
   h, w = img.shape[:2]
-  masked_img = np.concatenate([img, mask[:, :, None].astype(np.uint8)], axis=2)
-
+  if len(mask.shape) == 2: 
+    masked_img = np.stack([img, mask[:, :, None].astype(np.uint8)], axis=2)
+  else: 
+    masked_img = np.stack([img, mask.astype(np.uint8)], axis=2)
+  
   shear_kernel = np.float32([[1, shear_x, max(0, - shear_x * h)],
                          [shear_y, 1, max(0, - shear_y * w)],
                          [0, 0, 1]])
@@ -177,7 +190,7 @@ def shear_img(img, mask, shear_x, shear_y, bg_color):
                                borderMode=cv2.BORDER_CONSTANT, 
                                borderValue = bg_color,
                                flags=cv2.INTER_LINEAR)
-  return warped[:, :, :img.shape[2]], warped[:, :, -1]
+  return warped[:, :, :img.shape[2]], warped[:, :, img.shape[2] : ]
 
 def augment_img(img, 
                 rotate=0, 

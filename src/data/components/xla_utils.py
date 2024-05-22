@@ -27,7 +27,6 @@ class XLARandomSampler(Sampler):
         if not self.upsample_profile:
             if self.balance:
                 self.upsample_profile = self.upsample()
-
         lst = []
         if self.upsample_profile:
             lst = self.get_ids(self.upsample_profile)
@@ -38,11 +37,12 @@ class XLARandomSampler(Sampler):
         
         if self.shuffle:
             random.shuffle(lst)
-
+        
         return iter(lst)
     
     # mitigate sample unbalance by square root.
     def upsample(self):
+        print("Upsampling")
         samples = [h[1] - h[0] for h in list(self.data_source.values())]
         mean = np.mean(samples)
         ratio = np.sqrt(np.array(samples) / mean)
@@ -101,6 +101,6 @@ class XLACollator(object):
                 torch.Tensor(labels).to(torch.int64), 
                 num_classes=self.num_class
             ).to(torch.float)
-        }   
+        }
         
         return rs

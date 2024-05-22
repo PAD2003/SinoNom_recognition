@@ -175,8 +175,8 @@ class Analyzer:
         """ This function diversify the validation set by taking samples from training set. 
         """
         if refresh is True:
-            delete_contents_of_folder(self.data_dir + "/cache")
-            os.mkdir(self.data_dir + "/cache/copy")
+            delete_contents_of_folder(self.data_dir  + "/" + self.cache_dir)
+            os.mkdir(self.data_dir + "/" + self.cache_dir + "/copy")
             self.new_train = self.train.copy()
             self.new_train_hard = self.train_hard.copy()
             self.cache = dict()
@@ -194,14 +194,14 @@ class Analyzer:
                 data = self.new_train_hard[key].pop(index)
                 fname = data.replace("/", "_")
                 self.cache[key].append(fname)
-                shutil.copy(self.data_dir + "/train/" + data, self.data_dir + "/cache/" + fname)
+                shutil.copy(self.data_dir + "/train/" + data, self.data_dir + "/" + self.cache_dir + "/" + fname)
 
             for i in range(n_req[key]):
                 index = np.random.choice(range(len(self.new_train[key])))
                 data = self.new_train[key].pop(index)
                 fname = data.replace("/", "_")
                 self.cache[key].append(fname)
-                shutil.copy(self.data_dir + "/train/" + data, self.data_dir + "/cache/" + fname)
+                shutil.copy(self.data_dir + "/train/" + data, self.data_dir + "/" + self.cache_dir + "/" + fname)
             
             # in case that all request violated the exploit limit
             # only for missing labels  and demanding samples
@@ -209,11 +209,11 @@ class Analyzer:
                 print("Insufficient dataset, undergo copying samples label {}".format(key))
 
                 if self.train_full_dist[key] <= np.ceil(1 / maximum_exploit):
-                    index =  np.random.choice(range(self.train_full_dist[key]))
+                    index =  np.random.choice(range(max(1, self.train_full_dist[key] - 1)))
                     data = self.dataset['train'][key][index]
                     fname = "copy/" + data.replace("/", "_")
                     self.cache[key].append(fname)
-                    shutil.copy(self.data_dir + "/train/" + data, self.data_dir + "/cache/" + fname)
+                    shutil.copy(self.data_dir + "/train/" + data, self.data_dir + "/" + self.cache_dir + "/" + fname)
 
         
         if isinstance(export, str):
@@ -245,16 +245,30 @@ class Analyzer:
         
     def merge_cache_val(self, export = None):
         # prefix = "../cache"
-        for key in self.cache.keys():
-            if key not in self.val.keys():
-                self.val[key] = []
-            
-            for sample in self.cache[key]:
-                full_path = os.path.join(self.cache_dir, sample)
-                output_path = full_path.replace("/", "_")
-                self.val[key].append(output_path)
-                print(output_path)
-                shutil.copy(os.path.join(self.data_dir, full_path), os.path.join(self.data_dir + "/val", output_path) )
+        if 'val' in self.cache_dir:
+            prefix = self.cache_dir.replace("val/", "")
+            for key in self.cache.keys():
+                if key not in self.val.keys():
+                    self.val[key] = []
+                
+                for sample in self.cache[key]:
+                    full_path = os.path.join(prefix, sample)
+                    # output_path = full_path.replace("/", "_")
+                    self.val[key].append(full_path)
+                    print(full_path)
+                    # shutil.copy(os.path.join(self.data_dir, full_path), os.path.join(self.data_dir + "/val", output_path) )
+
+        else: 
+            for key in self.cache.keys():
+                if key not in self.val.keys():
+                    self.val[key] = []
+                
+                for sample in self.cache[key]:
+                    full_path = os.path.join(self.cache_dir, sample)
+                    output_path = full_path.replace("/", "_")
+                    self.val[key].append(output_path)
+                    print(output_path)
+                    shutil.copy(os.path.join(self.data_dir, full_path), os.path.join(self.data_dir + "/val", output_path) )
 
         if isinstance(export, str):
             output = dict()
