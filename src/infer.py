@@ -15,10 +15,6 @@ import cv2
 import torch
 import csv
 
-from src.data.components.aug.wrapper_v2 import Augmenter
-from src.data.components.vietocr_aug import ImgAugTransform
-from src.models.xla_module import XLALitModule
-
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # ------------------------------------------------------------------------------------ #
 # the setup_root above is equivalent to:
@@ -37,6 +33,10 @@ rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # more info: https://github.com/ashleve/rootutils
 # ------------------------------------------------------------------------------------ #
 
+from src.data.components.aug.wrapper_v2 import Augmenter
+from src.data.components.aug.vietocr_aug import ImgAugTransform
+from src.models.xla_module import XLALitModule
+
 from src.utils import (
     RankedLogger,
     extras,
@@ -48,12 +48,12 @@ from src.utils import (
 log = RankedLogger(__name__, rank_zero_only=True)
 
 # config
-images_folder = "data/my_valid"
-run_name = "2024-05-22_04-02-26"
-checkpoint_path = "logs/train/runs/2024-05-22_04-02-26/checkpoints/last.ckpt"
+images_folder = "data/wb_recognition_dataset/val/images"
+run_name = "2024-05-22_12-11-16"
+checkpoint_path = "logs/train/runs/2024-05-22_12-11-16/checkpoints/epoch_066.ckpt"
 csv_path = "data/output.csv"
 
-manifest = "data/manifest_full.json"
+manifest = "data/manifest.json"
 
 def get_decodevocab(manifest):
     with open(manifest, "r") as file:

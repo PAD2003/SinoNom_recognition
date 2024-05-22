@@ -12,7 +12,7 @@ defaults:
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
-tags: ["xla", "bsc_cnn"]
+tags: ["xla", "vgg16"]
 
 seed: 12345
 
