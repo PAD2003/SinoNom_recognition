@@ -4,8 +4,8 @@
 # python train.py experiment=ddpm
 
 defaults:
-  - override /data: xla_no_aug
-  - override /model: xla_bsc_cnn
+  - override /data: xla
+  - override /model: xla_vgg19
   - override /callbacks: default
   - override /trainer: default
 
@@ -17,7 +17,7 @@ tags: ["xla", "bsc_cnn"]
 seed: 12345
 
 trainer:
-  min_epochs: 30
+  min_epochs: 10
   max_epochs: 40
   gradient_clip_val: 0.5
 

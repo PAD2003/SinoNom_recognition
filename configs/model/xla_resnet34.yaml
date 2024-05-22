@@ -14,11 +14,11 @@ scheduler:
   patience: 10
 
 net:
-  _target_: src.models.components.vgg.VGG16bn
-  model_name: vgg16bn
+  _target_: src.models.components.simple_resnet.SimpleResnet
+  model_name: resnet34
   weights: DEFAULT
   output_shape: [2130]
-  unfreeze_depth: 2
+  unfreeze_depth: -1
 
 # compile model for faster training with pytorch 2.0
 compile: true

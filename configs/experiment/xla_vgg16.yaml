@@ -5,7 +5,7 @@
 
 defaults:
   - override /data: xla
-  - override /model: xla_bsc_cnn
+  - override /model: xla_vgg16
   - override /callbacks: default
   - override /trainer: default
 
@@ -18,7 +18,7 @@ seed: 12345
 
 trainer:
   min_epochs: 10
-  max_epochs: 12
+  max_epochs: 40
   gradient_clip_val: 0.5
 
 data:
