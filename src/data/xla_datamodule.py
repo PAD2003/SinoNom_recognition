@@ -76,18 +76,18 @@ class XLADataModule(LightningDataModule):
         # if isinstance(self.train_dataloader, DataLoader):
         #     return self.train_dataloader
         
-        train_sampler = XLARandomSampler( data_source=self.data_train.dataset.ranges,
-                                           max_size=len(self.data_train),
-                                           shuffle=self.hparams.shuffle,
-                                           balance=self.hparams.upsampling)
+        # train_sampler = XLARandomSampler( data_source=self.data_train.dataset.ranges,
+        #                                    max_size=len(self.data_train),
+        #                                    shuffle=self.hparams.shuffle,
+        #                                    balance=self.hparams.upsampling)
 
         collator = XLACollator( num_class=self.data_train.num_classes(),
                                 image_shape=self.hparams.image_shape)
 
         self.train_loader =  DataLoader(self.data_train,
                             batch_size = self.hparams.batch_size,
-                            # shuffle=self.hparams.shuffle,
-                            sampler=train_sampler,
+                            shuffle=self.hparams.shuffle,
+                            # sampler=train_sampler,
                             num_workers=self.hparams.num_workers,
                             collate_fn=collator,
                             pin_memory= self.hparams.pin_memory

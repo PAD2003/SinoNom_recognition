@@ -95,7 +95,7 @@ class Augmenter:
                     word_skeleton = thinning(mask)
                     filling = np.zeros_like(mask)
                     mask_img = np.stack([mask, word_skeleton, filling], axis=2) 
-                    print("Creating mask ", pwd)
+                    # print("Creating mask ", pwd)
                     cv2.imwrite(pwd, (mask_img * 255).astype(int).astype(np.uint8))
                     return mask_img[:, :, :2]
             else:

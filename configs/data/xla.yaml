@@ -20,4 +20,4 @@ pin_memory: False
 shuffle: True
 upsampling: True
 train_p: [0.6, 0.15, 0.15, 0.1]
-val_p: [0.0, 0.0, 0.0]
+val_p: [1.0, 0.0, 0.0, 0.0]
