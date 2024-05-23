@@ -49,12 +49,33 @@ from src.utils import (
 log = RankedLogger(__name__, rank_zero_only=True)
 
 # config
-images_folder = "data/my_valid"
-run_name = "2024-05-22_04-02-26"
-checkpoint_path = "logs/train/runs/2024-05-22_04-02-26/checkpoints/last.ckpt"
+images_folder = "data/wb_recognition_dataset/val/images"
 manifest = "data/manifest_full.json"
 
-output_path = "results/resnet18_noagument"
+# # resnet 18
+# checkpoint_path = "logs/train/runs/2024-05-23_03-09-03/checkpoints/epoch_067.ckpt"
+# run_name = checkpoint_path.split("/")[-3]
+# output_path = "results/resnet18"
+
+# resnet 34
+checkpoint_path = "logs/train/runs/2024-05-23_03-17-11/checkpoints/epoch_061.ckpt"
+run_name = checkpoint_path.split("/")[-3]
+output_path = "results/resnet34"
+
+# # resnet 50
+# checkpoint_path = "logs/train/runs/2024-05-23_03-04-01/checkpoints/epoch_057.ckpt"
+# run_name = checkpoint_path.split("/")[-3]
+# output_path = "results/resnet50"
+
+# # vgg 16
+# checkpoint_path = "logs/train/runs/2024-05-23_02-59-48/checkpoints/epoch_055.ckpt"
+# run_name = checkpoint_path.split("/")[-3]
+# output_path = "results/vgg16"
+
+# # vgg 19
+# checkpoint_path = "logs/train/runs/2024-05-23_02-14-44/checkpoints/epoch_069.ckpt"
+# run_name = checkpoint_path.split("/")[-3]
+# output_path = "results/vgg19"
 
 
 def get_decodevocab(manifest):
@@ -214,7 +235,7 @@ def infer(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
             preds = torch.argmax(logits, dim=1)
             labels = decode_labels(preds, decode_vocab)
             
-            print(filenames, logits)
+            # print(filenames, logits)
             
             for i, filename in enumerate(filenames):
                 result_preds[filename.split('.')[0]] = int(labels[i])
