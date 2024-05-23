@@ -13,19 +13,21 @@ class VGG(nn.Module):
         self.output_shape = output_shape[0]
 
         if model_name == 'vgg11_bn' or model_name == 'vgg11':
-            cnn = models.vgg11_bn(pretrained = True if "DEFAULT" else weights)
+            self.cnn = models.vgg11_bn(pretrained = True if "DEFAULT" else weights)
         elif model_name == 'vgg13_bn' or model_name == 'vgg13':
-            cnn = models.vgg13_bn(pretrained = True)
+            self.cnn = models.vgg13_bn(pretrained = True)
         elif model_name == 'vgg16_bn' or model_name == 'vgg16':
-            cnn = models.vgg13_bn(pretrained = True)
+            self.cnn = models.vgg16_bn(pretrained = True)
+        elif model_name == 'vgg19_bn' or model_name == 'vgg19':
+            self.cnn = models.vgg19_bn(pretrained = True)
+        else:
+            raise Exception("Model not available!")
 
-        self.vgg19 = models.vgg19_bn(pretrained=True)
-
-        self.vgg19.classifier[0] = nn.Linear(512 * 2 * 2, 4096)
-        self.vgg19.classifier[6] = nn.Linear(4096, output_shape[0])
+        self.cnn.classifier[0] = nn.Linear(512 * 2 * 2, 4096)
+        self.cnn.classifier[6] = nn.Linear(4096, output_shape[0])
 
     def forward(self, x):
-        x = self.vgg19.features(x)
+        x = self.cnn.features(x)
         x = torch.flatten(x, 1)
-        x = self.vgg19.classifier(x)
+        x = self.cnn.classifier(x)
         return x

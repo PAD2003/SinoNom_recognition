@@ -11,7 +11,7 @@ base_augmenter:
 
 color_augmenter:
   _target_: src.data.components.aug.vietocr_aug.ImgAugTransform
-  p: 0.4
+  p: 0.3
 
 image_shape: [64, 64]
 batch_size: 64

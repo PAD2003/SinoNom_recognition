@@ -18,7 +18,7 @@ net:
   model_name: vgg19bn
   weights: DEFAULT
   output_shape: [2130]
-  unfreeze_depth: 2
+  unfreeze_depth: -1
 
 # compile model for faster training with pytorch 2.0
 compile: true

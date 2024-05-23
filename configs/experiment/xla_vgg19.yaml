@@ -17,8 +17,8 @@ tags: ["xla", "vgg19"]
 seed: 12345
 
 trainer:
-  min_epochs: 10
-  max_epochs: 40
+  min_epochs: 1
+  max_epochs: 69
   gradient_clip_val: 0.5
 
 data:
@@ -26,4 +26,14 @@ data:
   batch_size: 512
   num_workers: 8
 
-# ckpt_path: /home/ducpa/code/SinoNom_recognition/logs/train/runs/2024-05-21_12-45-36/checkpoints/epoch_004.ckpt
+ckpt_path: /home/minhlv/Projects/ComputerVision/SinoNom_recognition/logs/train/runs/2024-05-22_14-47-10/checkpoints/epoch_068.ckpt
+
+logger:
+  wandb: 
+    log_model: True
+    project: "nom-image-processing"
+    name: "vgg19_upload"
+    tags: ${tags}
+    group: "weight_upload"
+  aim:
+    experiment: "vgg"

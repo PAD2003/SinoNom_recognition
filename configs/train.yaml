@@ -5,7 +5,7 @@
 defaults:
   - _self_
   - data: xla
-  - model: mnist
+  - model: xla_resnet34
   - callbacks: default
   - logger: wandb.yaml # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
   - trainer: default
@@ -33,7 +33,7 @@ task_name: "train"
 # tags to help you identify your experiments
 # you can overwrite this in experiment configs
 # overwrite from command line with `python train.py tags="[first_tag, second_tag]"`
-tags: ["dev"]
+tags: ["dev", "resnet34"]
 
 # set False to skip model training
 train: True
@@ -44,6 +44,17 @@ test: True
 
 # simply provide checkpoint path to resume training
 ckpt_path: null
+# ckpt_path: /home/minhlv/Projects/ComputerVision/SinoNom_recognition/logs/train/runs/2024-05-22_14-47-10/checkpoints/epoch_068.ckpt
 
 # seed for random number generators in pytorch, numpy and python.random
 seed: null
+
+logger:
+  wandb: 
+    log_model: True
+    project: "nom-image-processing"
+    name: "resnet34_upload"
+    tags: ${tags}
+    group: "weight_upload"
+  aim:
+    experiment: "resnet"
