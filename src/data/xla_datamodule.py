@@ -28,8 +28,8 @@ class XLADataModule(LightningDataModule):
                     pin_memory: bool = False, 
                     shuffle: bool = True,
                     upsampling: bool = True,
-                    train_p: list = [1.0, 0.0, 0.0],
-                    val_p: list = [1.0, 0.0, 0.0] 
+                    train_p: list = [1.0, 0.0, 0.0, 0.0],
+                    val_p: list = [1.0, 0.0, 0.0, 0.0] 
                     ):
         super().__init__()
         self.save_hyperparameters(logger=False)
@@ -54,6 +54,7 @@ class XLADataModule(LightningDataModule):
                                         manifest= self.hparams.manifest,
                                         task= 'train'
                                         )
+                                        
             val_dataset = XLADataset(data_dir=self.hparams.data_dir,
                                         manifest= self.hparams.manifest,
                                         task= 'val')

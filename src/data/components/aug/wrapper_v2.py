@@ -184,16 +184,16 @@ class Augmenter:
                             opacity=(0.6, 1),
                             scale=(0.5, 1.2),
                             bx=(0, 3),
-                            by=(0, 3),
-                            ex=(0, 3),
-                            ey=(0, 3),
+                            by=(0, 5),
+                            ex=(0, 10),
+                            ey=(0, 10),
                             logger=None,
                             debug= None,
                             keep_mask=False,
                             export=False,
                             fname=None,
                             borderMode='constant',
-                            morph_size=(-2, 2.5),
+                            morph_size=(-4, 4.5),
                             morph=False,
                             inv=(0., 1.)):
         
@@ -204,8 +204,6 @@ class Augmenter:
         alpha = borderMode != 'constant'
 
         inv = np.random.choice([True, False], p=inv) 
-        # print(alpha)
-
         scale = Augmenter.randomRange(scale)
         # Recenter image
         bx = int(Augmenter.randomRange(bx)) + int(max(1 - scale, 0) * img.shape[1] / 2)
@@ -234,10 +232,6 @@ class Augmenter:
         if mask is None:
             mask = self.bake_mask(img, path=None)
 
-        # Configure background
-        # if borderMode == 'replicate':
-        #     bg_color = None
-        
         # Transform image
         transformed, transformed_mask, transform_matrix, alpha_mask = warp_transform(img, 
                                                                                     mask=mask, 
@@ -264,36 +258,23 @@ class Augmenter:
         cropped_mask = cropped_mask[:, :, 0]
         
         if alpha_mask is not None:
-            # print("Apply native")
             alpha_mask = alpha_mask[max(0,y-by):min(y+h+ey, transformed.shape[0]),
                                     max(0,x-bx):min(x+w+ex, transformed.shape[1])]
             if morph is True:
                 morph_size = int(Augmenter.randomRange(morph_size) * scale) 
-                # print(morph_size)
                 if morph_size > 0: 
-                    # print(morph_size)
                     word_mask = cv2.dilate(skeleton, MORPH_WINDOW_CROSS[5 - morph_size])
                     alpha_mask[word_mask == 0] = 0
                 elif morph_size < 0:
                     word_mask = cv2.dilate(skeleton, MORPH_WINDOW_ELLIPSE[int(- morph_size) ])
                     thicken_mask = np.stack([word_mask] * 3, axis = 2).astype(float)
                     thicken_mask = cv2.GaussianBlur(thicken_mask, (3, 3), 0)
-            # print(alpha_mask.shape, cropped.shape)
-            
-            # cropped, alpha_mask = elasticdeform.deform_random_grid([cropped, alpha_mask], 
-            #                                                         sigma=np.mean(cropped.shape) / 4, 
-            #                                                         points=3, 
-            #                                                         axis=(0, 1))
-            # Initialize background seed.
-            
-            
+
             randomnizer = np.random.default_rng()
             alpha_mask = cv2.GaussianBlur(alpha_mask, (3, 3), 0)
-            # print(np.sum((alpha_mask > 0).astype(int)), alpha_mask.shape)
+
             alpha_mask = np.stack((alpha_mask, alpha_mask, alpha_mask), axis=2)
-            # index_mask = np.random.choice(range(freq.shape[0]), cropped.shape[0] * cropped.shape[1], p=freq)
-            # background = np.array([bg[index] for index in index_mask], dtype=float).reshape(cropped.shape)
-            
+
             # Initialize background 
             if np.max(freq) < 0.7: 
                 background = randomnizer.choice(bg, 
@@ -316,16 +297,14 @@ class Augmenter:
             # Matching background & foreground color
             ratio = np.mean(background, axis=(0, 1)) / bg_color[:3]
             background /= ratio
-            # print("Background color profile: {}".format(np.mean(background, axis=[0, 1])))
             # Fusing image
             background = cv2.GaussianBlur(background, (3, 3), 0)
             alpha_mask *= Augmenter.randomRange(opacity)
             # check validity
-            # print(np.median(alpha_mask))
             output = background * (1 - alpha_mask) + cropped * alpha_mask
-            
+            print(morph_size)
             if morph is True and morph_size < 0:
-                if inv is True: 
+                if inv: 
                     print("Inverse")
                     output[thicken_mask > 0] = 255 -  output[thicken_mask > 0]
                 else: 
@@ -339,7 +318,6 @@ class Augmenter:
 
         if isinstance(debug, str):
             fname = fname.split("/")[-1].split(".")[0]
-            # print("Logging output for debugging")
 
             cv2.imwrite(os.path.join(debug, "original_{}.jpg").format(fname), img)
             # content mask
@@ -381,29 +359,28 @@ class Augmenter:
                                         ex=(1, ),
                                         ey=(1, ),
                                         borderMode=borderMode)[0]
+                                        
         elif pose == 2:
             return  self.transform_img( img, 
                                         fname=fname,
                                         scale=(1., ),  
                                         rotate=(0, ), 
-                                        shear_x=(0, ), 
-                                        shear_y=(0, ), 
                                         morph_size=(-3, 3.5),
                                         morph=True,
                                         borderMode=borderMode)[0]
         elif pose == 3:
             return  self.transform_img( img, 
                                         fname=fname,
-                                        morph_size=(-3, 3.5),
+                                        morph_size=(-4, 4.5),
                                         morph=True,
                                         borderMode=borderMode)[0]
         else: 
             return  self.transform_img( img, 
                                         fname=fname,
-                                        morph_size=(-3, 3.5),
+                                        morph_size=(-4, 4.5),
                                         morph=True,
                                         borderMode=borderMode,
-                                        inv=(0.2, 0.8))[0]
+                                        inv=(1, 0))[0]
     
     def threaded_augment(self, 
                             img, 
@@ -467,44 +444,37 @@ if __name__ =="__main__":
     img = cv2.imread(img_dir + filename)
     label = int(label)
     delete_contents_of_folder("/data/hpc/potato/sinonom/data/debug")
-    # transformed, _, _ = augmenter.transform_img(img, 
-    #                                             fname=filename,
-    #                                             debug="/data/hpc/potato/sinonom/data/debug", 
-    #                                             borderMode='native',
-    #                                             scale=(0.7, ),
-    #                                             morph_size=(4.,), 
-    #                                             morph=True,
-    #                                             inv=(1., 0.))
+    transformed = augmenter.full_augment(img, [0, 0, 0, 1], fname=filename, borderMode='native')
     # img_label = "/work/hpc/firedogs/data_/train_gt.txt"
     # parts = ["train_img_88652.png", "xeva"]
     # img = cv2.imread(img_dir + parts[0])
     # print(parts[0])
     # filename = parts[0].split(".")[0]
     # processed = augmenter.process(img, 
-    #                               parts[1], 
-    #                               1, 
-    #                               p=(0, 1, 0, 0), 
+    #                               p=(0, 0, 0, 1), 
+    #                               fname=filename,  
+
     #                               fname=filename,
-    #                               borderMode='replicate')[0]
+    #                               borderMode='native')[0]
     # print(processed.shape, processed.dtype)
-    # cv2.imwrite("/data/hpc/potato/sinonom/data/debug/{}.jpg".format(fname.split(".")[0]), transformed)
+    cv2.imwrite("/data/hpc/potato/sinonom/data/debug/{}.jpg".format(fname.split(".")[0]), transformed)
     # import time 
-    i = 0
-    current = time.time()
-    start = current
-    with open("./data/manifest_full.json", "r") as file: 
-        dataset = json.load(file)['train']
-    for key in dataset.keys(): 
-        samples = dataset[key]
-        for sample in dataset[key]:
-            img = cv2.imread(img_dir + sample)
-            # print(sample)
-            i += 1
-            fname = sample.split(".")[0]
-            current = time.time()
-            # augmenter.bake_bg(img, path=fname + ".npz")
-            # augmenter.bake_mask(img, path=fname + ".png")
-            transformed = augmenter.full_augment(img, [0, 0, 0, 1], fname=sample, borderMode='native')
-            print(i, "-th image shape:", time.time() - current)
-    print("Done all in", time.time() - start)
+    # i = 0
+    # current = time.time()
+    # start = current
+    # with open("./data/manifest_full.json", "r") as file: 
+    #     dataset = json.load(file)['train']
+    # for key in dataset.keys(): 
+    #     samples = dataset[key]
+    #     for sample in dataset[key]:
+    #         img = cv2.imread(img_dir + sample)
+    #         # print(sample)
+    #         i += 1
+    #         fname = sample.split(".")[0]
+    #         current = time.time()
+    #         # augmenter.bake_bg(img, path=fname + ".npz")
+    #         # augmenter.bake_mask(img, path=fname + ".png")
+    #         transformed = augmenter.full_augment(img, [0, 0, 0, 1], fname=sample, borderMode='native')
+    #         print(i, "-th image shape:", time.time() - current)
+    # print("Done all in", time.time() - start)
         
