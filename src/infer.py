@@ -14,9 +14,6 @@ import torchvision.transforms as transforms
 import cv2
 import torch
 import csv
-
-from src.data.components.aug.wrapper_v2 import Augmenter
-from src.data.components.vietocr_aug import ImgAugTransform
 from src.models.xla_module import XLALitModule
 
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
@@ -51,9 +48,10 @@ log = RankedLogger(__name__, rank_zero_only=True)
 images_folder = "data/my_valid"
 run_name = "2024-05-22_04-02-26"
 checkpoint_path = "logs/train/runs/2024-05-22_04-02-26/checkpoints/last.ckpt"
-csv_path = "data/output.csv"
-
 manifest = "data/manifest_full.json"
+
+output_path = "results/resnet18_noagument"
+
 
 def get_decodevocab(manifest):
     with open(manifest, "r") as file:
@@ -71,13 +69,19 @@ def decode_labels(preds, decode_vocab):
         labels.append(label)
     return labels
 
-def save_csv(result, csv_path=csv_path):
+def save_csv(result_preds, csv_path):
+    result_preds = {**{"image_name":"label"}, **result_preds}
     with open(csv_path, mode='w', newline='') as csv_file:
         writer = csv.writer(csv_file)
         
-        # Ghi từng row vào file CSV
-        for filename, class_ in result.items():
+        for filename, class_ in result_preds.items():
             writer.writerow([filename, class_])
+
+def save_npz(result_logits, npz_path):
+    logits = result_logits.values()
+    logits = np.stack(logits, axis=0)
+    print("Save logits file: ", logits.shape)
+    np.savez(npz_path, logits)
 
 class XLAInferDataset(Dataset):
     def __init__(
@@ -184,14 +188,16 @@ def infer(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
                                 image_shape=cfg.data.image_shape)
     dataloader = DataLoader(dataset = dataset,
                             batch_size = 2,
-                            shuffle=True,
+                            shuffle=False,
                             collate_fn=collator)
     
     log.info("Starting infering!")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = model.to(device)
     decode_vocab = get_decodevocab(manifest)
-    result = {}
+    
+    result_preds = {}
+    result_logits = {}
 
     with torch.inference_mode():
         model.eval()
@@ -204,10 +210,23 @@ def infer(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
             preds = torch.argmax(logits, dim=1)
             labels = decode_labels(preds, decode_vocab)
             
+            print(filenames, logits)
+            
             for i, filename in enumerate(filenames):
-                result[filename.split('.')[0]] = int(labels[i])
+                result_preds[filename.split('.')[0]] = int(labels[i])
+                result_logits[filename.split('.')[0]] = np.array(logits[i].cpu())
     
-    save_csv(result, csv_path)
+    result_preds = dict(sorted(result_preds.items()))
+    result_logits = dict(sorted(result_logits.items()))
+    
+    try:
+        os.mkdir(path=output_path)
+    except OSError as error:
+        print(error)
+        # return
+    
+    save_npz(result_logits, os.path.join(output_path, "logits.npz"))
+    save_csv(result_preds, os.path.join(output_path, "preds.csv"))
 
 @hydra.main(version_base="1.3", config_path=f"../logs/train/runs/{run_name}/.hydra", config_name="config.yaml")
 def main(cfg: DictConfig) -> None:
