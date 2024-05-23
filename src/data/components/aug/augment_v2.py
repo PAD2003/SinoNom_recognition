@@ -157,7 +157,7 @@ def warp_transform(img,
                                           borderMode=cv2.BORDER_CONSTANT,
                                           borderValue=(0,), 
                                           flags=cv2.INTER_LINEAR)
-    transformed = np.concatenate([transformed_img, transformed_mask[:, :, None].astype(np.uint8)], axis=2)
+    # transformed = np.concatenate([transformed_img, transformed_mask[:, :, None].astype(np.uint8)], axis=2)
   
   if alpha is True:
     alpha_mask = cv2.warpPerspective(np.ones((img.shape[0], img.shape[1]), dtype=np.float32), 
