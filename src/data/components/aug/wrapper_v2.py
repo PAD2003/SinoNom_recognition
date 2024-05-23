@@ -75,6 +75,10 @@ class Augmenter:
             self.texture = cv2.imread(path)
 
     def bake_mask(self, image, path=None):
+        if not path:
+            mask = sharp_mask(image, 0.8, 0.8, line_erode=False)
+            skeleton = thinning(mask)
+            return  np.stack([mask, skeleton], axis=2)
         data = None
         pwd = os.path.join(self.mask_checkpoint, self.task)
         # Check background folder availability
@@ -231,8 +235,8 @@ class Augmenter:
             mask = self.bake_mask(img, path=None)
 
         # Configure background
-        if borderMode == 'replicate':
-            bg_color = None
+        # if borderMode == 'replicate':
+        #     bg_color = None
         
         # Transform image
         transformed, transformed_mask, transform_matrix, alpha_mask = warp_transform(img, 
@@ -247,7 +251,8 @@ class Augmenter:
                                                                                     pad_y=ey,
                                                                                     bg_color=bg_color, 
                                                                                     export=export,
-                                                                                    alpha=alpha)
+                                                                                    alpha=alpha,
+                                                                                    border_replicate= borderMode == 'replicate')
         
         # Crop content and padding
         points = np.array(np.where(transformed_mask[:, :, 0] > 0)).T
@@ -280,6 +285,8 @@ class Augmenter:
             #                                                         points=3, 
             #                                                         axis=(0, 1))
             # Initialize background seed.
+            
+            
             randomnizer = np.random.default_rng()
             alpha_mask = cv2.GaussianBlur(alpha_mask, (3, 3), 0)
             # print(np.sum((alpha_mask > 0).astype(int)), alpha_mask.shape)

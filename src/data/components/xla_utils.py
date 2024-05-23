@@ -21,12 +21,16 @@ class XLARandomSampler(Sampler):
         self.balance = balance
         self.total = 0
         self.max_size = max_size
-
-    def __iter__(self):
-        
+        self.loss_weight = 1
+                
         if not self.upsample_profile:
             if self.balance:
                 self.upsample_profile = self.upsample()
+        
+        
+        
+    def __iter__(self):
+
         lst = []
         if self.upsample_profile:
             lst = self.get_ids(self.upsample_profile)
@@ -46,7 +50,9 @@ class XLARandomSampler(Sampler):
         samples = [h[1] - h[0] for h in list(self.data_source.values())]
         mean = np.mean(samples)
         ratio = np.sqrt(np.array(samples) / mean)
-        subset = np.ceil(ratio * mean).astype(int) 
+        subset = np.max(np.stack([np.ceil(ratio * mean).astype(int), np.array(samples)]), axis=0) 
+        self.total = np.sum(subset)
+        self.loss_weight = 1 / ratio 
         return dict(zip(list(self.data_source.keys()), subset.tolist()))
 
     def __len__(self):
@@ -60,12 +66,14 @@ class XLARandomSampler(Sampler):
         for key in request.keys():
             assert key in self.data_source.keys(), "Key not found"
             lr = self.data_source[key]
-            key_ids = np.random.randint(lr[0], lr[1] + 1,  size=(request[key], )).tolist()
+            key_ids = np.random.choice(range(lr[0], lr[1]),  size=(request[key], ), replace=True).tolist()
             # print(key_ids)
             ids += key_ids 
-        
+
         return ids
 
+    def get_weight(self):
+        return self.loss_weight
         
 
 class XLACollator(object):
