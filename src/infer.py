@@ -34,6 +34,10 @@ rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # more info: https://github.com/ashleve/rootutils
 # ------------------------------------------------------------------------------------ #
 
+from src.data.components.aug.wrapper_v2 import Augmenter
+from src.data.components.aug.vietocr_aug import ImgAugTransform
+from src.models.xla_module import XLALitModule
+
 from src.utils import (
     RankedLogger,
     extras,

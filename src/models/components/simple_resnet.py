@@ -19,13 +19,14 @@ class SimpleResnet(nn.Module):
         layers = list(backbone.children())[:-1] # not include output layers
         self.feature_extractor = nn.Sequential(*layers)
 
-        # freeze self.feature_extractor
-        for param in self.feature_extractor.parameters():
-            param.requires_grad = False
+        if unfreeze_depth > 0:
+            # freeze self.feature_extractor
+            for param in self.feature_extractor.parameters():
+                param.requires_grad = False
 
-        # unfreeze some layer # problem: too much param to train
-        for param in self.feature_extractor[-unfreeze_depth][1].parameters():
-            param.requires_grad = True
+            # unfreeze some layer # problem: too much param to train
+            for param in self.feature_extractor[-unfreeze_depth][1].parameters():
+                param.requires_grad = True
 
         # get in_features of resnet50's output layer (2048)
         num_filters = backbone.fc.in_features
