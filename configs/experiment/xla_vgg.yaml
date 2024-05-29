@@ -5,14 +5,14 @@
 
 defaults:
   - override /data: xla
-  - override /model: xla_vgg16
+  - override /model: xla_vgg
   - override /callbacks: default
   - override /trainer: default
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
-tags: ["xla", "vgg16"]
+tags: ["xla", "vgg"]
 
 seed: 12345
 
@@ -24,6 +24,6 @@ trainer:
 data:
   manifest: ${paths.data_dir}manifest.json
   batch_size: 512
-  num_workers: 8
+  num_workers: 24
 
 # ckpt_path: /home/ducpa/code/SinoNom_recognition/logs/train/runs/2024-05-21_12-45-36/checkpoints/epoch_004.ckpt

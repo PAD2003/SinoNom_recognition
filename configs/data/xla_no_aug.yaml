@@ -1,16 +1,16 @@
 _target_: src.data.xla_datamodule.XLADataModule
 data_dir: ${paths.data_dir}wb_recognition_dataset
-manifest: ${paths.data_dir}manifest_full.json
+manifest: ${paths.data_dir}manifest.json
 
-base_augmenter:
-  _target_: src.data.components.aug.wrapper_v2.Augmenter
-  texture_path: ${paths.data_dir}augment/texture/
-  bg_checkpoint: ${paths.data_dir}augment/background/
-  task: train
+# base_augmenter:
+#   _target_: src.data.components.aug.wrapper_v2.Augmenter
+#   texture_path: ${paths.data_dir}augment/texture/
+#   bg_checkpoint: ${paths.data_dir}augment/background/
+#   task: train
 
-color_augmenter:
-  _target_: src.data.components.vietocr_aug.ImgAugTransform
-  p: 0
+# color_augmenter:
+#   _target_: src.data.components.vietocr_aug.ImgAugTransform
+#   p: 0
 
 image_shape: [64, 64]
 batch_size: 512
