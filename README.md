@@ -19,7 +19,7 @@ We performed analysis and pre-processing of the data with various techniques, be
 
 After training a set of models with potent accuracies, we ensembled them with different configurations to further enhance our accuracy score. Ultimately, our approach achieved a maximum score of 96.98% on the provided validation set, an improvement of roughly 35% over the accuracy of the baseline Convolutional Neural Network we chose.
 
-You can further read about our approach at [here]().
+You can further read about our approach at [here](https://drive.google.com/file/d/1yYT5MYsr2M9HmTXgOXbphyJ01GuruX6M/view?usp=sharing).
 
 ## Installation
 
