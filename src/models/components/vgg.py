@@ -19,6 +19,10 @@ class VGG(nn.Module):
             self.cnn = models.vgg13_bn(pretrained = True)
         elif model_name == 'vgg16_bn' or model_name == 'vgg16':
             self.cnn = models.vgg16_bn(pretrained = True)
+        elif model_name == 'vgg19_bn' or model_name == 'vgg19':
+            self.cnn = models.vgg19_bn(pretrained = True)
+        else:
+            raise Exception("Invalid Model!")
 
         self.cnn.classifier[0] = nn.Linear(512 * 2 * 2, 4096)
         self.cnn.classifier[6] = nn.Linear(4096, output_shape[0])

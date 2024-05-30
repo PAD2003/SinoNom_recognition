@@ -1,0 +1,25 @@
+_target_: src.models.xla_module.XLALitModule
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 0.001
+  weight_decay: 0.0
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  mode: min
+  factor: 0.1
+  patience: 10
+
+net:
+  _target_: src.models.components.vgg.VGG
+  model_name: vgg19
+  weights: DEFAULT
+  output_shape: [2130]
+  unfreeze_depth: -1
+
+# compile model for faster training with pytorch 2.0
+compile: true
+num_classes: 2130
