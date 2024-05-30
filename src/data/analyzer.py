@@ -290,4 +290,3 @@ class Analyzer:
         self.cache = dict()
             
                 
-    # def query_train(self, )
