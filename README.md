@@ -51,7 +51,7 @@ bash script/prepare_data.sh
 
 You can also see our manifest files in the downloaded folder.
 
-![image](relative%20images/manifest_family.jpeg?raw=true "Title")
+![image](images/manifest_family.jpeg)
 
 - [manifest.json]() is another way to present the train-test split of the original dataset. 
 - We observed that the validation set does not contain all 2130 SinoNom characters, so we split the original training set into a new training set and a cache set (as shown in [manifest_split.json]()). 
