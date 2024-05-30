@@ -5,9 +5,9 @@
 defaults:
   - _self_
   - data: xla
-  - model: mnist
+  - model: xla_vgg16
   - callbacks: default
-  - logger: wandb.yaml # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
+  - logger: null # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
   - trainer: default
   - paths: default
   - extras: default

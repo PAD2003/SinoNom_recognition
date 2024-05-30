@@ -366,6 +366,7 @@ class Augmenter:
                     choice,
                     fname=None, 
                     borderMode='native'):
+        print('here')
         pose = np.random.choice((1, 2, 3, 4), p=choice)
         
         if pose == 1:

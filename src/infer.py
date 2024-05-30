@@ -5,6 +5,7 @@ import rootutils
 from lightning import LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
+import omegaconf
 import json
 import os
 import numpy as np
@@ -48,19 +49,19 @@ from src.utils import (
 
 log = RankedLogger(__name__, rank_zero_only=True)
 
-# config
-images_folder = "data/wb_recognition_dataset/val/images"
-manifest = "data/manifest_full.json"
+# # config
+# images_folder = "data/wb_recognition_dataset/val/images"
+# manifest = "data/manifest_full.json"
 
 # # resnet 18
 # checkpoint_path = "logs/train/runs/2024-05-23_03-09-03/checkpoints/epoch_067.ckpt"
 # run_name = checkpoint_path.split("/")[-3]
 # output_path = "results/resnet18"
 
-# resnet 34
-checkpoint_path = "logs/train/runs/2024-05-23_03-17-11/checkpoints/epoch_061.ckpt"
-run_name = checkpoint_path.split("/")[-3]
-output_path = "results/resnet34"
+# # resnet 34
+# checkpoint_path = "logs/train/runs/2024-05-23_03-17-11/checkpoints/epoch_061.ckpt"
+# run_name = checkpoint_path.split("/")[-3]
+# output_path = "results/resnet34"
 
 # # resnet 50
 # checkpoint_path = "logs/train/runs/2024-05-23_03-04-01/checkpoints/epoch_057.ckpt"
@@ -178,7 +179,7 @@ class XLAInferCollator(object):
         
         return rs
 
-# @task_wrapper
+# @hydra.main(version_base="1.3", config_path=f"../logs/train/runs/{run_name}/.hydra", config_name="config.yaml")
 def infer(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Evaluates given checkpoint on a datamodule testset.
 
@@ -197,14 +198,14 @@ def infer(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     # color_augmenter: ImgAugTransform = hydra.utils.instantiate(cfg.data.color_augmenter)
 
     log.info(f"Instantiating model <{cfg.model._target_}>")
-    model = XLALitModule.load_from_checkpoint(checkpoint_path)
+    model = XLALitModule.load_from_checkpoint(cfg.checkpoint_path)
 
     log.info("Instantiating loggers...")
     logger: List[Logger] = instantiate_loggers(cfg.get("logger"))
 
     log.info("Instantiating data...")
     dataset = XLAInferDataset(
-        images_folder=images_folder,
+        images_folder=cfg.images_folder,
         base_augmenter=base_augmenter,
         color_augmenter=color_augmenter,
         val_p = cfg.data.val_p
@@ -219,7 +220,7 @@ def infer(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     log.info("Starting infering!")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = model.to(device)
-    decode_vocab = get_decodevocab(manifest)
+    decode_vocab = get_decodevocab(cfg.manifest)
     
     result_preds = {}
     result_logits = {}
@@ -241,27 +242,30 @@ def infer(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
                 result_preds[filename.split('.')[0]] = int(labels[i])
                 result_logits[filename.split('.')[0]] = np.array(logits[i].cpu())
     
-    result_preds = dict(sorted(result_preds.items()))
-    result_logits = dict(sorted(result_logits.items()))
+    result_preds = dict(sorted(result_preds.items(), key=lambda x : int(x[0])))
+    result_logits = dict(sorted(result_logits.items(), key=lambda x : int(x[0])))
     
     try:
-        os.mkdir(path=output_path)
+        os.mkdir(path=cfg.output_path)
     except OSError as error:
         print(error)
         # return
     
-    save_npz(result_logits, os.path.join(output_path, "logits.npz"))
-    save_csv(result_preds, os.path.join(output_path, "preds.csv"))
+    save_npz(result_logits, os.path.join(cfg.output_path, "logits.npz"))
+    save_csv(result_preds, os.path.join(cfg.output_path, "preds.csv"))
 
-@hydra.main(version_base="1.3", config_path=f"../logs/train/runs/{run_name}/.hydra", config_name="config.yaml")
-def main(cfg: DictConfig) -> None:
-    """Main entry point for evaluation.
 
-    :param cfg: DictConfig configuration composed by Hydra.
-    """
-    # apply extra utilities
-    # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
-    extras(cfg)
+@hydra.main(version_base="1.3", config_path=f"../configs", config_name="infer.yaml")
+def main(cfg_: DictConfig) -> None:
+    print(cfg_)
+    run_name = cfg_.checkpoint_path.split("/")[-3]
+    
+    cfg = omegaconf.OmegaConf.load(f"logs/train_lvm/runs/{run_name}/.hydra/config.yaml")
+    cfg.images_folder = cfg_.images_folder
+    cfg.manifest = cfg_.manifest
+    cfg.checkpoint_path = cfg_.checkpoint_path
+    cfg.output_path = cfg_.output_path
+    
     infer(cfg)
 
 

@@ -1,0 +1,5 @@
+images_folder: null
+manifest: "data/manifest_full.json"
+
+checkpoint_path: null
+output_path: null

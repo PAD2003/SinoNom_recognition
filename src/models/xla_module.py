@@ -4,6 +4,7 @@ import torch
 from lightning import LightningModule
 from torchmetrics import MaxMetric, MeanMetric
 from torchmetrics.classification.accuracy import Accuracy
+import numpy as np
 
 
 class XLALitModule(LightningModule):
@@ -13,7 +14,8 @@ class XLALitModule(LightningModule):
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler,
         compile: bool,
-        num_classes: int
+        num_classes: int,
+        weight_path=None
     ) -> None:
         super().__init__()
 
@@ -24,7 +26,13 @@ class XLALitModule(LightningModule):
         self.net = net
 
         # loss function
-        self.criterion = torch.nn.CrossEntropyLoss()
+        # self.criterion = torch.nn.CrossEntropyLoss()
+        if not weight_path:
+            self.criterion = torch.nn.CrossEntropyLoss()
+        else:
+            weight_path = "data/loss_weight.npz"
+            weight = torch.from_numpy(np.load(weight_path)['loss'])
+            self.criterion = torch.nn.CrossEntropyLoss(weight=weight)
 
         # metric objects for calculating and averaging accuracy across batches
         self.train_acc = Accuracy(task="multiclass", num_classes=num_classes)

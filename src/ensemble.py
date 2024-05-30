@@ -2,28 +2,30 @@ import os
 import numpy as np
 import json
 import csv
+import path
+import hydra
+from omegaconf import DictConfig
+from typing import Any, Dict, List, Optional
 
-# config
-results_folder = "results"
-manifest = "data/manifest_full.json"
-images_folder = "data/wb_recognition_dataset/val/images"
-
-# code
 def get_logits(results_folder):
     all_logits = {}
     for root, dirs, files in os.walk(results_folder):
         
         if root == results_folder:
             continue
-        print(root)
         model = root.split("/")[-1]
         logits = np.load(os.path.join(root, "logits.npz"))
         all_logits[model] = logits['arr_0']
         
     return all_logits
 
-def get_filenames(images_folder):
-    return sorted(os.listdir(images_folder))
+def get_filenames(folder_path):
+    
+    folder = path.Path(folder_path)
+    jpg_files = list(folder.glob('*.jpg'))
+    sorted_files = sorted(jpg_files, key=lambda x: int(x.stem))
+
+    return [str(file.name) for file in sorted_files]
 
 def get_decodevocab(manifest):
     with open(manifest, "r") as file:
@@ -49,8 +51,9 @@ def save_csv(result_preds, csv_path):
         for filename, class_id in result_preds.items():
             writer.writerow([filename, class_id])
 
-def soft_ensemble(all_logits, weights):
-    assert sum(weights) == 1
+def soft_ensemble(all_logits, weights, manifest, images_folder):
+    print(weights)
+    # assert sum(weights) == 1
     ensemble_logits = np.zeros(shape=list(all_logits.values())[0].shape)
     for i, (model, logits) in enumerate(all_logits.items()):
         ensemble_logits += logits * weights[i]
@@ -61,11 +64,24 @@ def soft_ensemble(all_logits, weights):
     
     filenames = get_filenames(images_folder)
     results = {}
+    assert len(filenames) == len(ensemble_labels)
     for filename, ensemble_label in zip(filenames, ensemble_labels):
         results[filename.split('.')[0]] = int(ensemble_label)
     
     return ensemble_logits, results
 
-all_logits = get_logits(results_folder)
-ensemble_logits, results = soft_ensemble(all_logits, weights=[0.2, 0.2, 0.2, 0.2, 0.2])
-save_csv(results, f"{results_folder}/ensemble.csv")
+@hydra.main(version_base="1.3", config_path="../configs", config_name="ensemble.yaml")
+def main(cfg: DictConfig) -> Optional[float]:
+    results_folder = cfg.results_folder
+    manifest = cfg.manifest
+    images_folder = cfg.images_folder
+    
+    all_logits = get_logits(results_folder)
+    num_models = len(all_logits)
+    ensemble_logits, results = soft_ensemble(all_logits, [float(1/num_models)]*num_models, manifest, images_folder)
+
+    save_csv(results, f"{results_folder}/ensemble.csv")
+
+
+if __name__ == "__main__":
+    main()
