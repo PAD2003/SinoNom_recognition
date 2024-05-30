@@ -4,7 +4,7 @@
 # python train.py experiment=ddpm
 
 defaults:
-  - override /data: xla
+  - override /data: xla_no_aug
   - override /model: xla_resnet
   - override /callbacks: default
   - override /trainer: default
@@ -26,5 +26,3 @@ data:
   manifest: ${paths.data_dir}manifest.json
   batch_size: 512
   num_workers: 24
-
-# ckpt_path: /home/minhlv/Projects/ComputerVision/SinoNom_recognition/logs/train/runs/2024-05-22_12-11-16/checkpoints/epoch_066.ckpt

@@ -81,15 +81,23 @@ python src/train.py trainer.max_epochs=20 data.batch_size=64
 
 We already train 6 models (resnet18, resnet34, resnet50, vgg16, vgg16_v2, vgg19). You can easily download those (including configurations and checkpoints) and then using soft ensemble strategy to receive the best results.
 
-To avoid overtuning, we use the same weight for all models when performing the ensemble.
+If you want to infer with each models, use the command like this
+
+```bash
+python -m src.infer images_folder='path/to/images/folder' checkpoint_path="path/to/your/checkpoints" output_path="path/to/your/output/folder"
+```
+
+We have already write script for you to infer with our trained models and using ensemble strategy. To avoid overtuning, we use the same weight for all models when performing the ensemble.
 
 ```bash
 # download our trained models
 bash script/get_models.sh
+
+# infer with each model and then use ensemble strategy 
 bash script/prepare_infer.sh
 ```
 
-After using these commands, wait for a few minutes to receive results in [results/](results/). If you have the ground truth csv file, you can evaluate your models with this command.
+After using these commands, wait for a few minutes to receive csv file results in [results/](results/). If you have the ground truth csv file, you can evaluate your models with this command.
 
 ```bash
 python evaluation.py --gt_csv "path/to/gt/csv" --pred_csv "path/to/pred/pred/csv"
