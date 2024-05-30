@@ -24,18 +24,6 @@ class ImgAugTransform:
                 sometimes(iaa.Add((-40, 40), per_channel=0.5)),
 
                 sometimes(iaa.JpegCompression(compression=(5, 80))),
-                
-                # distort
-                # sometimes(iaa.Crop(percent=(0.01, 0.05), sample_independently=True)),
-                # sometimes(iaa.PerspectiveTransform(scale=(0.01, 0.01))),
-                # sometimes(iaa.Affine(scale=(0.7, 1.3), translate_percent=(-0.1, 0.1), 
-                #                    rotate=(-5, 5), shear=(-5, 5), 
-                #                     order=[0, 1], cval=(0, 255), 
-                #                     mode=ia.ALL)),
-
-                # sometimes(iaa.OneOf([iaa.Dropout(p=(0, 0.1)),
-                #                     iaa.CoarseDropout(p=(0, 0.1), size_percent=(0.02, 0.25))])),
-
             ],
             random_order=True
         ),

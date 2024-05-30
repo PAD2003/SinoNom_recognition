@@ -30,24 +30,11 @@ def thinning(mask):
     subset = erode - opened
     # Union of all previous sets
     thin = cv2.bitwise_or(subset,thin)
-    # thin = cv2.morphologyEx(thin, cv2.MORPH_DILATE, kernel, iterations=1)
-    # thin = cv2.morphologyEx(thin, cv2.MORPH_CLOSE, kernel, iterations=2)
-    # thin = cv2.morphologyEx(thin, cv2.MORPH_ERODE, kernel, iterations=1)
     # Set the eroded image for next iteration
     mask = erode.copy()
 
-  # thin = cv2.morphologyEx(thin, cv2.MORPH_CLOSE, close_kernel, iterations=3)
-  # thin = cv2.morphologyEx(thin, cv2.MORPH_DILATE, close_kernel, iterations=1)
   return thin
 
-
-def load_translator(dict_path):
-    with open(dict_path, "r") as file:
-        for line in file:
-            part = line.strip().split()
-            if len(part) > 1:
-                translator[part[0]] = part[1]
-    return True
 
 def load_texture(path, intensity=1):
     img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
@@ -60,18 +47,6 @@ def load_texture(path, intensity=1):
     return cropped
 
 #################################### PREPARE DATA ##################################################
-#### LABEL
-def translate(label):
-    output = ""
-    num_punc = 0
-    for char in label:
-        output += translator[char]
-    
-    for char in output:
-        if char == '^' or char == '~' or char == '`' or char == '\'' or char == '?' or char == '.' or char == '_':
-            num_punc += 1
-    
-    return output, len(output) - num_punc, num_punc
 
 #### IMAGE
 odd = lambda a: a + a % 2 - 1
@@ -212,15 +187,6 @@ def masking(img, grey=False, keep_line=True, line_x_erosion=0.9, line_y_erosion=
 
     return final, bg_color
 
-def recreate(img):
-  median = np.mean(img, axis=(0,1))
-  bg_mask = np.where(img > median)
-  # print(bg_mask)
-  return background
-# load_translator("/work/hpc/firedogs/potato/translate.txt")
-# load_texture("/work/hpc/firedogs/potato/asset/texture.png", intensity=2)
-# print(texture)
-# data_/new_public_test/public_test_img_0.jpg
 if __name__ == "abc":
   img_dir = "data_/new_public_test/"
   img_label = "/work/hpc/firedogs/data_/train_gt.txt"

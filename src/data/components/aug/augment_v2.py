@@ -21,7 +21,6 @@ def sharp_mask(img, line_x_erosion, line_y_erosion, line_erode=True):
         final = line_erosion(threshold, 1, line_x_erosion)
         final = line_erosion(final, 0, line_y_erosion)
     else:
-        # print("Crop row first")
         final = line_erosion(threshold, 0, line_y_erosion)
         final = line_erosion(final, 1, line_x_erosion)
   else:
@@ -29,9 +28,6 @@ def sharp_mask(img, line_x_erosion, line_y_erosion, line_erode=True):
   final = cv2.morphologyEx(final, cv2.MORPH_DILATE, cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3)), iterations=1)
   return final
 
-def augment_point(centroid, param):
-  angle = param['angle']
-  
 
 def light_mask(img):
   """ Light mask for color processing
@@ -42,20 +38,19 @@ def light_mask(img):
 
 
 def rotate_img(img, angle, mask, bg_color):
+  """ Wrapper for rotation """
   h, w = img.shape[:2]
   corner = np.zeros((4, 3))
   corner[1:3, 1] += h
   corner[2:4, 0] += w
   corner[:, 2] = 1
-  # print(corner)
   rotate_matrix = cv2.getRotationMatrix2D((w / 2, h / 2), -angle, 1.)
-  # print(rotate_matrix.shape)
+
   transformed_corner = np.vstack([np.matmul(rotate_matrix, c.T) for c in corner])
-  # print(transformed_corner)
   masked_img = np.concatenate([img, mask[:, :, None].astype(np.uint8)], axis=2)
   rotate_matrix[:, 2] += [- min(transformed_corner[:, 0]), - min(transformed_corner[:, 1])]
   test = np.vstack([np.matmul(rotate_matrix, c.T) for c in corner])
-  # print(test)
+  
   w1 = max(transformed_corner[:, 0]) - min(transformed_corner[:, 0])
   h1 = max(transformed_corner[:, 1]) - min(transformed_corner[:, 1])
   warped = cv2.warpAffine(src=masked_img,
@@ -66,6 +61,8 @@ def rotate_img(img, angle, mask, bg_color):
   return warped[:, :, :img.shape[2]], warped[:, :, image.shape[2]:]
 
 def point_transform(points, M, homogeneous=False, transpose=False):  
+  """Extension for point-wise transformation for corners"""
+
   if homogeneous is False: 
     padded = np.pad(points, ((0, 0), (0, 1)), mode='constant', constant_values=(1,))
   else:
@@ -83,9 +80,7 @@ def point_transform(points, M, homogeneous=False, transpose=False):
   else:
     return transformed[:, :2]
 
-# def warp_image(img, variance):
-  
-  
+
 def warp_transform(img, 
                    mask,
                    scale, 
@@ -130,7 +125,7 @@ def warp_transform(img,
   else: 
     masked_img = np.concatenate([img, mask.astype(np.uint8)], axis=2)
   masked_img = cv2.resize(masked_img, (0, 0),fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
-  # print(bg_color)
+  
   if border_replicate is False:
     transformed_img = cv2.warpPerspective(masked_img[:, :, :3], 
                                       transform_matrix, 
@@ -157,7 +152,6 @@ def warp_transform(img,
                                           borderMode=cv2.BORDER_CONSTANT,
                                           borderValue=(0,), 
                                           flags=cv2.INTER_LINEAR)
-    # transformed = np.concatenate([transformed_img, transformed_mask[:, :, None].astype(np.uint8)], axis=2)
   
   if alpha is True:
     alpha_mask = cv2.warpPerspective(np.ones((img.shape[0], img.shape[1]), dtype=np.float32), 
@@ -173,6 +167,7 @@ def warp_transform(img,
   
   
 def shear_img(img, mask, shear_x, shear_y, bg_color):
+  """Wrapper for image shearing"""
   h, w = img.shape[:2]
   if len(mask.shape) == 2: 
     masked_img = np.stack([img, mask[:, :, None].astype(np.uint8)], axis=2)
@@ -182,7 +177,6 @@ def shear_img(img, mask, shear_x, shear_y, bg_color):
   shear_kernel = np.float32([[1, shear_x, max(0, - shear_x * h)],
                          [shear_y, 1, max(0, - shear_y * w)],
                          [0, 0, 1]])
-  # iscale = min(abs(shear_x),abs(shear_y))
   output_size = (int(w + abs(shear_x) * h), int(h + abs(shear_y) * w))
   warped = cv2.warpPerspective(masked_img, 
                                shear_kernel, 
@@ -202,7 +196,7 @@ def augment_img(img,
                 keep_mask = False, 
                 export= False, 
                 borderMode='constant'):
-  # cài đặt thông số
+  # Configuration
   skew_angle = 0
   shear_x_level = 0
   shear_y_level = 0
@@ -223,7 +217,7 @@ def augment_img(img,
   
   log = "Rotate {0} degree, Shear_x {1}, Shear_y {2}, Noise".format(skew_angle, shear_x_level, shear_y_level)
 
-  # trích xuất mask
+  # Mask extraction
   sub_img = smooth(img, 20, 50)
   thresh = np.mean(sub_img, axis=(0, 1))
 
@@ -232,15 +226,11 @@ def augment_img(img,
   # trich xuat bg
   bg_mask = img < thresh
   bg_color = extract_median_color_axis(img.copy(), bg_mask, axis = (0, 1)).tolist()
+  
   # bg_color = [0, 0, 0]
   bg_color.append(0)
 
-  # # kéo 
-  # sheared, sheared_mask = shear_img(img, mask, shear_x_level, shear_y_level, bg_color)
-  # # xoay
-  # rotated, rotated_mask = rotate_img(sheared, skew_angle, sheared_mask, bg_color)
-  # # cắt
-  
+
   transformed, transformed_mask, transform_matrix = warp_transform(img, mask, skew_angle, shear_x_level, shear_y_level, bg_color, export=export)
   
   if keep_mask is True:
@@ -249,7 +239,7 @@ def augment_img(img,
   else:
     output, transform_matrix = crop_img(transformed, transformed_mask, 0, 0, 0, 0, bg_color[:3], smoothing = False, transform=transform_matrix)
     
-  # log anh ra ngoai
+  # logger for debugging
   if debug is not None:
     print("Debug_folder: " + debug)
     mask_img = mask * 255
@@ -257,7 +247,6 @@ def augment_img(img,
     print(cv2.imwrite(debug.format("_original"), img))
     print(cv2.imwrite(debug.format("_smoothed"), sub_img))
     print(cv2.imwrite(debug.format("_mask"), mask))
-    # print(cv2.imwrite(debug.format("_shear"), sheared))
     print(cv2.imwrite(debug.format("_transform"), transformed))
     
   # log transform
@@ -277,6 +266,7 @@ def augment_one(data_dir = "/work/hpc/firedogs/data_/new_train/",
                 noise=(0,), 
                 debug= None, 
                 keep_mask=False):
+      """Draft of augmentation"""
       logger = open(log_dir, "w")
       img_path = img_name.format(index, "jpg")
       path = data_dir + img_path
@@ -290,14 +280,6 @@ def augment_one(data_dir = "/work/hpc/firedogs/data_/new_train/",
           print(path)
       if img is None:
           return 0
-      # print("Reading" + path)
-      # output = augment_img(img,  
-      #                     rotate=rotate, 
-      #                     shear_x=shear_x, 
-      #                     shear_y=shear_y, 
-      #                     noise=noise, 
-      #                     logger = logger)
-      # print(output)
         
         
       output_path = output_dir + img_path
@@ -319,6 +301,7 @@ def augment_dir(data_dir = "/work/hpc/firedogs/data_/new_train/",
                 shear_x=(-0.3, 0.3), 
                 shear_y=(-0.2, 0.2), 
                 noise=(0,)):
+    """Automatic augment all files in directory"""
     logger = open(log_dir, "w")
     while True:
         flag = False
@@ -345,16 +328,4 @@ def augment_dir(data_dir = "/work/hpc/firedogs/data_/new_train/",
                           noise=noise, 
                           logger = logger)
         print(output)
-        # cv2.imwrite(output_path, augment_img(img, rotate=rotate, 
-        #                                           shear_x=shear_x, 
-        #                                           shear_y=shear_y, 
-        #                                           noise=noise, 
-        #                                           logger = logger))
     logger.close()
-
-
-if __name__ == "__main__":
-    augment_one(index = 2315, rotate=(-30, 30), shear_x=(-0.8, 0.8), shear_y=(0.8,), debug = "/work/hpc/firedogs/potato/check/img{}.jpg")
-    # augment_dir()
-# py /work/hpc/firedogs/potato/augment.py
-# /work/hpc/firedogs/data_old/new_train/train_img_94093.png
