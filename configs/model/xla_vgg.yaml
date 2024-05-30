@@ -15,7 +15,7 @@ scheduler:
 
 net:
   _target_: src.models.components.vgg.VGG
-  model_name: vgg19
+  model_name: vgg16 # vgg19
   weights: DEFAULT
   output_shape: [2130]
   unfreeze_depth: -1
