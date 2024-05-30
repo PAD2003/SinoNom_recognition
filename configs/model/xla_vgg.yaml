@@ -1,4 +1,4 @@
-_target_: src.models.mnist_module.MNISTLitModule
+_target_: src.models.xla_module.XLALitModule
 
 optimizer:
   _target_: torch.optim.Adam
@@ -14,12 +14,12 @@ scheduler:
   patience: 10
 
 net:
-  _target_: src.models.components.simple_dense_net.SimpleDenseNet
-  input_size: 784
-  lin1_size: 64
-  lin2_size: 128
-  lin3_size: 64
-  output_size: 10
+  _target_: src.models.components.vgg.VGG
+  model_name: vgg19
+  weights: DEFAULT
+  output_shape: [2130]
+  unfreeze_depth: -1
 
 # compile model for faster training with pytorch 2.0
-compile: false
+compile: true
+num_classes: 2130

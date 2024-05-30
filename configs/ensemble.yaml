@@ -1,0 +1,3 @@
+results_folder: results
+manifest: data/manifest_full.json
+images_folder: null
